@@ -1,0 +1,16 @@
+{
+  "name": "test-install",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "mcp-ai-vision-debug-ui-automation": "^1.0.1"
+  }
+}

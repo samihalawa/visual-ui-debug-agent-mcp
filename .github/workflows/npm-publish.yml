@@ -1,0 +1,85 @@
+name: Publish NPM Package
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (patch, minor, major, or specific version)'
+        required: true
+        default: 'patch'
+
+jobs:
+  publish-npm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          registry-url: https://registry.npmjs.org/
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Set version
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [[ "${{ github.event.inputs.version }}" =~ ^(patch|minor|major)$ ]]; then
+            npm version ${{ github.event.inputs.version }} --no-git-tag-version
+          else
+            npm version ${{ github.event.inputs.version }} --allow-same-version --no-git-tag-version
+          fi
+      
+      - name: Publish to NPM
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+  
+  publish-platform-specific:
+    needs: publish-npm
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [darwin, linux, win32]
+        architecture: [x64, arm64]
+        exclude:
+          - platform: win32
+            architecture: arm64
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          registry-url: https://registry.npmjs.org/
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Create platform-specific package
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            pkg.name = 'visual-ui-debug-agent-mcp-${{ matrix.platform }}-${{ matrix.architecture }}';
+            pkg.os = ['${{ matrix.platform }}'];
+            pkg.cpu = ['${{ matrix.architecture }}'];
+            console.log(JSON.stringify(pkg, null, 2));
+          " > temp-package.json
+          mv temp-package.json package.json
+          
+      - name: Publish platform-specific package
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}

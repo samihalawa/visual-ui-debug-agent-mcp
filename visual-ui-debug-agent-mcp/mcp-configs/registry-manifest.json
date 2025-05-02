@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 1,
+  "type": "mcp-server",
+  "id": "mcp-ai-vision-debug-ui-automation",
+  "version": "1.0.0",
+  "name": "MCP AI Vision Debug UI Automation",
+  "description": "MCP server for visual analysis and automated UI testing with Playwright",
+  "author": "samihalawa",
+  "license": "ISC",
+  "repository": "https://github.com/samihalawa/mcp-ai-vision-debug-ui-automation",
+  "documentation": "https://github.com/samihalawa/mcp-ai-vision-debug-ui-automation#readme",
+  "keywords": [
+    "mcp",
+    "ai",
+    "vision",
+    "debug",
+    "automation",
+    "testing",
+    "playwright",
+    "ui-testing"
+  ],
+  "installMethods": [
+    {
+      "type": "npm",
+      "package": "mcp-ai-vision-debug-ui-automation",
+      "command": "npx mcp-ai-vision-debug-ui-automation"
+    },
+    {
+      "type": "docker",
+      "image": "samihalawa/mcp-ai-vision-debug-ui-automation:latest",
+      "command": "docker run -p 8080:8080 samihalawa/mcp-ai-vision-debug-ui-automation:latest"
+    }
+  ],
+  "tools": [
+    {
+      "name": "screenshot_url",
+      "description": "Captures screenshots of any URL",
+      "parameters": {
+        "url": {
+          "type": "string",
+          "description": "The URL to capture a screenshot of"
+        },
+        "fullPage": {
+          "type": "boolean",
+          "description": "Whether to capture the full page or just viewport",
+          "optional": true
+        },
+        "selector": {
+          "type": "string",
+          "description": "CSS selector to screenshot only that element",
+          "optional": true
+        },
+        "waitForSelector": {
+          "type": "string",
+          "description": "CSS selector to wait for before taking screenshot",
+          "optional": true
+        },
+        "waitTime": {
+          "type": "number",
+          "description": "Time to wait in milliseconds before taking screenshot",
+          "optional": true
+        },
+        "device": {
+          "type": "string",
+          "description": "Device to emulate (e.g., \"iPhone 13\", \"Pixel 5\")",
+          "optional": true
+        }
+      }
+    },
+    {
+      "name": "enhanced_page_analyzer",
+      "description": "Performs comprehensive analysis of a web page",
+      "parameters": {
+        "url": {
+          "type": "string",
+          "description": "URL to analyze"
+        },
+        "includeConsole": {
+          "type": "boolean",
+          "description": "Whether to include console logs",
+          "optional": true
+        },
+        "mapElements": {
+          "type": "boolean",
+          "description": "Whether to map interactive elements",
+          "optional": true
+        },
+        "fullPage": {
+          "type": "boolean",
+          "description": "Whether to analyze full page",
+          "optional": true
+        },
+        "waitForSelector": {
+          "type": "string",
+          "description": "CSS selector to wait for before analysis",
+          "optional": true
+        },
+        "waitTime": {
+          "type": "number",
+          "description": "Time to wait in milliseconds",
+          "optional": true
+        },
+        "device": {
+          "type": "string",
+          "description": "Device to emulate",
+          "optional": true
+        }
+      }
+    },
+    {
+      "name": "ui_workflow_validator",
+      "description": "Executes a sequence of UI interactions to simulate a user workflow",
+      "parameters": {
+        "startUrl": {
+          "type": "string",
+          "description": "Initial URL for the workflow"
+        },
+        "taskDescription": {
+          "type": "string",
+          "description": "Description of the user task being simulated"
+        },
+        "steps": {
+          "type": "array",
+          "description": "Array of step objects"
+        },
+        "captureScreenshots": {
+          "type": "string",
+          "description": "When to capture screenshots (\"all\", \"failure\", \"none\")"
+        },
+        "device": {
+          "type": "string",
+          "description": "Device to emulate",
+          "optional": true
+        }
+      }
+    },
+    {
+      "name": "api_endpoint_tester",
+      "description": "Tests multiple API endpoints and verifies responses",
+      "parameters": {
+        "url": {
+          "type": "string",
+          "description": "Base URL of the API"
+        },
+        "endpoints": {
+          "type": "array",
+          "description": "Array of endpoint objects"
+        },
+        "authToken": {
+          "type": "string",
+          "description": "Auth token to include in all requests",
+          "optional": true
+        }
+      }
+    },
+    {
+      "name": "dom_inspector",
+      "description": "Inspects DOM elements and their properties",
+      "parameters": {
+        "url": {
+          "type": "string",
+          "description": "URL to inspect"
+        },
+        "selector": {
+          "type": "string",
+          "description": "CSS selector to inspect"
+        },
+        "includeChildren": {
+          "type": "boolean",
+          "description": "Whether to include children elements",
+          "optional": true
+        },
+        "includeStyles": {
+          "type": "boolean",
+          "description": "Whether to include computed styles",
+          "optional": true
+        },
+        "waitTime": {
+          "type": "number",
+          "description": "Time to wait before inspecting",
+          "optional": true
+        }
+      }
+    },
+    {
+      "name": "navigation_flow_validator",
+      "description": "Tests a sequence of user actions across multiple pages",
+      "parameters": {
+        "startUrl": {
+          "type": "string",
+          "description": "URL to start the navigation flow from"
+        },
+        "steps": {
+          "type": "array",
+          "description": "Array of step objects"
+        },
+        "captureScreenshots": {
+          "type": "boolean",
+          "description": "Whether to capture screenshots",
+          "optional": true
+        },
+        "includeConsole": {
+          "type": "boolean",
+          "description": "Whether to include console logs",
+          "optional": true
+        },
+        "device": {
+          "type": "string",
+          "description": "Device to emulate",
+          "optional": true
+        }
+      }
+    }
+  ],
+  "requires": {
+    "node": ">=18.0.0",
+    "platform": ["linux", "darwin", "win32"]
+  }
+}

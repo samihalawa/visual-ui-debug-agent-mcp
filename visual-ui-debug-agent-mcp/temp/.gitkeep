@@ -1,0 +1,2 @@
+# This file ensures the temp directory exists in Git
+# The temp directory is used for temporary screenshot storage 

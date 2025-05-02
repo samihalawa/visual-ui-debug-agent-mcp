@@ -1,0 +1,81 @@
+{
+  "name": "mcp-ai-vision-debug-ui-automation",
+  "version": "1.0.0",
+  "description": "MCP AI Vision Debug UI Automation - MCP server for visual analysis and automated UI testing",
+  "author": "samihalawa",
+  "license": "ISC",
+  "homepage": "https://github.com/samihalawa/mcp-ai-vision-debug-ui-automation",
+  "repository": "https://github.com/samihalawa/mcp-ai-vision-debug-ui-automation",
+  "icon": "https://raw.githubusercontent.com/samihalawa/mcp-ai-vision-debug-ui-automation/main/publicresources/icon.png",
+  "tags": [
+    "ai",
+    "vision",
+    "debug",
+    "testing",
+    "automation",
+    "mcp",
+    "ui",
+    "playwright",
+    "visual-testing",
+    "web"
+  ],
+  "compatibility": {
+    "node": ">=18"
+  },
+  "settings": {
+    "port": {
+      "type": "number",
+      "default": 8080,
+      "description": "Port number for the server to run on"
+    },
+    "debugMode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable debug mode for verbose logging"
+    },
+    "headless": {
+      "type": "boolean",
+      "default": true,
+      "description": "Run browser in headless mode"
+    },
+    "screenshotQuality": {
+      "type": "number",
+      "default": 80,
+      "min": 0,
+      "max": 100,
+      "description": "Quality level for screenshots (0-100)"
+    },
+    "screenshotDir": {
+      "type": "string",
+      "default": "./temp",
+      "description": "Directory to store screenshots"
+    },
+    "maxConcurrentSessions": {
+      "type": "number",
+      "default": 5,
+      "min": 1,
+      "max": 20,
+      "description": "Maximum number of concurrent browser sessions"
+    }
+  },
+  "installation": {
+    "methods": [
+      {
+        "type": "npm",
+        "command": "npm install -g ai-vision-debug-ui-automation"
+      },
+      {
+        "type": "docker",
+        "command": "docker pull samihalawa/ai-vision-debug-ui-automation:latest"
+      },
+      {
+        "type": "git",
+        "command": "git clone https://github.com/samihalawa/ai-vision-debug-ui-automation.git"
+      }
+    ],
+    "requirements": [
+      "Node.js v18 or later",
+      "npm v7 or later"
+    ]
+  }
+}

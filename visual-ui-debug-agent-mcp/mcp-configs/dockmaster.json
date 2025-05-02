@@ -1,0 +1,59 @@
+{
+  "type": "mcp-server",
+  "name": "mcp-ai-vision-debug-ui-automation",
+  "displayName": "MCP AI Vision Debug UI Automation",
+  "version": "1.0.0",
+  "description": "MCP server for visual analysis and automated UI testing",
+  "author": "samihalawa",
+  "license": "ISC",
+  "icon": "publicresources/icon.svg",
+  "repository": "https://github.com/samihalawa/mcp-ai-vision-debug-ui-automation",
+  "runtime": {
+    "type": "node",
+    "minVersion": "18.0.0"
+  },
+  "launchCommand": {
+    "command": "node",
+    "args": ["build/index.js"]
+  },
+  "config": {
+    "port": {
+      "type": "number",
+      "default": 8080,
+      "description": "Port number for the MCP server"
+    },
+    "debug": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable debug mode for verbose logging"
+    },
+    "headless": {
+      "type": "boolean",
+      "default": true,
+      "description": "Run browser in headless mode"
+    },
+    "screenshotDir": {
+      "type": "string",
+      "default": "./temp",
+      "description": "Directory to store screenshots"
+    }
+  },
+  "tools": [
+    "screenshot_url",
+    "enhanced_page_analyzer",
+    "ui_workflow_validator",
+    "api_endpoint_tester",
+    "navigation_flow_validator",
+    "dom_inspector"
+  ],
+  "categories": [
+    "testing",
+    "automation",
+    "vision",
+    "ai"
+  ],
+  "requirements": {
+    "memory": "512MB",
+    "cpu": 1
+  }
+}

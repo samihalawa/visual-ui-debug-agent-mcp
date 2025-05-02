@@ -1,0 +1,9 @@
+ __      ___    _        _                     
+ \ \    / / |  | |      | |    /\              
+  \ \  / /| |  | |______| |   /  \             
+   \ \/ / | |  | |______| |  / /\ \            
+    \  /  | |__| |      | | / ____ \           
+     \/    \____/       |_|/_/    \_\          
+                                           
+ Visual UI Debug Agent
+ An autonomous MCP for visual testing & debugging

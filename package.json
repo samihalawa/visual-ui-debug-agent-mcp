@@ -1,0 +1,89 @@
+{
+  "name": "visual-ui-debug-agent-mcp",
+  "version": "1.0.0",
+  "description": "VUDA: Visual UI Debug Agent - An autonomous MCP for visual testing and debugging of user interfaces",
+  "main": "build/index.js",
+  "type": "module",
+  "bin": {
+    "vuda": "build/index.js",
+    "visual-ui-debug-agent": "build/index.js",
+    "vuda-smithery": "scripts/start-smithery.js"
+  },
+  "scripts": {
+    "build": "tsc && shx chmod +x build/index.js",
+    "start": "node build/index.js",
+    "prepare": "npm run build",
+    "dev": "npm run build && npm start",
+    "init-repo": "node scripts/init-repo.js",
+    "watch": "tsc --watch",
+    "release": "npm version patch && ./scripts/mcp-deploy.sh npm",
+    "deploy:npm": "./scripts/mcp-deploy.sh npm",
+    "deploy:docker": "./scripts/mcp-deploy.sh docker",
+    "deploy:cross-platform": "./scripts/mcp-deploy.sh cross-platform",
+    "deploy:all": "./scripts/mcp-deploy.sh all",
+    "install:local": "./scripts/install-local-mcp.sh",
+    "test": "node scripts/test-mcp.js",
+    "test:server": "concurrently \"npm run start\" \"sleep 3 && npm run test\"",
+    "smithery": "node scripts/run-with-smithery.js",
+    "smithery:key": "./scripts/run-with-smithery-key.sh",
+    "smithery:install": "./scripts/smithery-install.sh",
+    "smithery:run": "./scripts/smithery-run.sh",
+    "smithery:publish": "./scripts/publish-to-smithery.sh",
+    "smithery:api-publish": "node scripts/smithery-api-publish.js",
+    "test:smithery": "node scripts/verify-smithery.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/samihalawa/visual-ui-debug-agent-mcp.git"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.4.1",
+    "axios": "^1.6.0",
+    "jimp": "^0.22.10",
+    "node-fetch": "^3.3.2",
+    "playwright": "^1.40.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/jimp": "^0.2.28",
+    "@types/node": "^18.0.0",
+    "@types/node-fetch": "^2.6.4",
+    "concurrently": "9.1.2",
+    "shx": "0.3.4",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "keywords": [
+    "vuda",
+    "visual",
+    "ui",
+    "debug",
+    "agent",
+    "mcp",
+    "modelcontextprotocol",
+    "ai",
+    "vision",
+    "web",
+    "testing",
+    "automation",
+    "playwright",
+    "glama",
+    "ui-testing",
+    "visual-testing",
+    "autonomous",
+    "ui-debugging"
+  ],
+  "author": "samihalawa",
+  "license": "ISC"
+}

@@ -1,0 +1,44 @@
+# Smithery configuration file for VUDA: Visual UI Debug Agent
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP
+    type: object
+    required:
+      - port
+    properties:
+      port:
+        type: number
+        description: Port number for the MCP server to run on
+        default: 8080
+      debug:
+        type: boolean
+        description: Enable debug mode for additional logging
+        default: false
+      headless:
+        type: boolean
+        description: Run browser in headless mode
+        default: true
+      maxConcurrentSessions:
+        type: number
+        description: Maximum number of concurrent browser sessions
+        default: 5
+      screenshotDir:
+        type: string
+        description: Directory to store screenshots
+        default: "./temp"
+  commandFunction:
+    # A function that produces the CLI command to start the MCP on stdio
+    |-
+    (config) => ({ 
+      command: 'node', 
+      args: ['build/index.js'], 
+      env: { 
+        PORT: config.port?.toString(), 
+        DEBUG: config.debug ? "true" : "false",
+        HEADLESS: config.headless ? "true" : "false",
+        MAX_CONCURRENT_SESSIONS: config.maxConcurrentSessions?.toString(),
+        SCREENSHOT_DIR: config.screenshotDir
+      } 
+    })

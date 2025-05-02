@@ -1,0 +1,13 @@
+THIS IS A PLACEHOLDER FILE.
+
+In a real implementation, you would use an image conversion tool
+to create a PNG version of the SVG icon. Since we can't directly
+create binary images through this interface, this placeholder
+reminds you to generate the actual PNG icon file separately.
+
+You can use tools like:
+- ImageMagick: convert icon.svg icon.png
+- Inkscape: inkscape -o icon.png icon.svg
+- Or any online SVG to PNG converter
+
+This PNG file should be referenced in the glama.json configuration.

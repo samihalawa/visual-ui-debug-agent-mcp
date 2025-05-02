@@ -1,0 +1,82 @@
+name: Publish to Smithery
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  publish-smithery:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Create Smithery Package
+        run: |
+          TEMP_DIR=$(mktemp -d)
+          PACKAGE_DIR="$TEMP_DIR/visual-ui-debug-agent-mcp"
+          mkdir -p "$PACKAGE_DIR"
+          
+          cp -R build "$PACKAGE_DIR/"
+          cp -R publicresources "$PACKAGE_DIR/"
+          cp smithery.yaml "$PACKAGE_DIR/"
+          cp package.json README.md LICENSE "$PACKAGE_DIR/"
+          
+          mkdir -p "$PACKAGE_DIR/scripts"
+          cp scripts/run-with-smithery.js "$PACKAGE_DIR/scripts/"
+          
+          # Create Smithery metadata
+          cat > "$PACKAGE_DIR/smithery.json" << EOL
+          {
+            "name": "visual-ui-debug-agent-mcp",
+            "version": "$(node -p "require('./package.json').version")",
+            "description": "VUDA: Visual UI Debug Agent",
+            "smithery": {
+              "displayName": "VUDA: Visual UI Debug Agent",
+              "description": "Visual testing and debugging for user interfaces",
+              "icon": "publicresources/icon.svg",
+              "startCommand": {
+                "type": "stdio",
+                "command": "node",
+                "args": ["scripts/run-with-smithery.js"]
+              }
+            }
+          }
+          EOL
+          
+          cd "$TEMP_DIR"
+          tar -czf visual-ui-debug-agent-mcp.tgz visual-ui-debug-agent-mcp
+          
+          cd "$GITHUB_WORKSPACE"
+          mkdir -p artifacts
+          mv "$TEMP_DIR/visual-ui-debug-agent-mcp.tgz" artifacts/
+          
+          rm -rf "$TEMP_DIR"
+      
+      - name: Install Smithery CLI
+        run: npm install -g @smithery/cli
+      
+      - name: Publish to Smithery
+        run: |
+          npx @smithery/cli install artifacts/visual-ui-debug-agent-mcp.tgz --id visual-ui-debug-agent-mcp --client claude --key ${{ secrets.SMITHERY_API_KEY }}
+          
+          if [ $? -ne 0 ]; then
+            curl -X POST 'https://api.smithery.ai/v1/teams/default/servers' \
+              -H "Authorization: Bearer ${{ secrets.SMITHERY_API_KEY }}" \
+              -H 'Content-Type: multipart/form-data' \
+              -F "package=@artifacts/visual-ui-debug-agent-mcp.tgz" \
+              -F 'id=visual-ui-debug-agent-mcp' \
+              -F 'description=VUDA: Visual UI Debug Agent'
+          fi
