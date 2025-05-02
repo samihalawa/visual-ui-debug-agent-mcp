@@ -70,7 +70,7 @@
       },
       {
         "type": "docker",
-        "command": "docker pull samihalawa/visual-ui-debug-agent:latest"
+        "command": "docker pull luigi1234/visual-ui-debug-agent:latest"
       },
       {
         "type": "git",

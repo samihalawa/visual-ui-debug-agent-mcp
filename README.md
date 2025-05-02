@@ -72,10 +72,10 @@ For containerized deployment:
 
 ```bash
 # Pull the image from Docker Hub
-docker pull samihalawa/visual-ui-debug-agent:latest
+docker pull luigi1234/visual-ui-debug-agent:latest
 
 # Run the container
-docker run -p 8080:8080 samihalawa/visual-ui-debug-agent:latest
+docker run -p 8080:8080 luigi1234/visual-ui-debug-agent:latest
 ```
 
 ### Smithery Integration
