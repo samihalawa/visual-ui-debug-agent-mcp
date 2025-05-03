@@ -1,16 +1,8 @@
 # VUDA: Visual UI Debug Agent
 
-```
- __      ___    _        _                     
- \ \    / / |  | |      | |    /\              
-  \ \  / /| |  | |______| |   /  \             
-   \ \/ / | |  | |______| |  / /\ \            
-    \  /  | |__| |      | | / ____ \           
-     \/    \____/       |_|/_/    \_\          
-                                           
- Visual UI Debug Agent
- An autonomous MCP for visual testing & debugging
-```
+<a href="https://ibb.co/YTWc0mMQ"><img src="https://i.ibb.co/TqT4W6S2/VUDAbanner.png" alt="VUDAbanner" border="0"></a>
+
+
 
 [![MCP Server](https://img.shields.io/badge/MCP-VUDA-blue)](https://github.com/samihalawa/visual-ui-debug-agent-mcp) [![GLAMA Compatible](https://img.shields.io/badge/GLAMA-Compatible-green)](https://github.com/samihalawa/visual-ui-debug-agent-mcp) [![Smithery Compatible](https://img.shields.io/badge/Smithery-Compatible-orange)](https://smithery.ai/docs/config)
 
