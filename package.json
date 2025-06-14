@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "VUDA: Visual UI Debug Agent - An autonomous MCP for visual testing and debugging of user interfaces",
   "main": "build/index.js",
-  "module": "./src/index.ts",
   "type": "module",
   "bin": {
     "vuda": "build/index.js",
