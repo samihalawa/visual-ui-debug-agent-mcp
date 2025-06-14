@@ -70,13 +70,9 @@ jobs:
       
       - name: Publish to Smithery
         run: |
-          npx @smithery/cli install artifacts/visual-ui-debug-agent-mcp.tgz --id visual-ui-debug-agent-mcp --client claude --key ${{ secrets.SMITHERY_API_KEY }}
-          
-          if [ $? -ne 0 ]; then
-            curl -X POST 'https://api.smithery.ai/v1/teams/default/servers' \
-              -H "Authorization: Bearer ${{ secrets.SMITHERY_API_KEY }}" \
-              -H 'Content-Type: multipart/form-data' \
-              -F "package=@artifacts/visual-ui-debug-agent-mcp.tgz" \
-              -F 'id=visual-ui-debug-agent-mcp' \
-              -F 'description=VUDA: Visual UI Debug Agent'
-          fi
+          curl -X POST 'https://api.smithery.ai/v1/teams/default/servers' \
+            -H "Authorization: Bearer ${{ secrets.SMITHERY_API_KEY }}" \
+            -H 'Content-Type: multipart/form-data' \
+            -F "package=@artifacts/visual-ui-debug-agent-mcp.tgz" \
+            -F 'id=visual-ui-debug-agent-mcp' \
+            -F 'description=VUDA: Visual UI Debug Agent'
