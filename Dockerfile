@@ -27,13 +27,18 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Create app directory
-WORKDIR /usr/src/app
+# Set working directory
+WORKDIR /app
 
-# Copy app source
-COPY . .
+# Copy package files
+COPY package*.json ./
+COPY tsconfig.json ./
 
-# Install app dependencies
+# Copy source code
+COPY src/ ./src/
+COPY smithery.yaml ./
+
+# Install dependencies
 RUN npm install
 
 # Install Playwright browsers
@@ -42,11 +47,11 @@ RUN npx playwright install --with-deps chromium
 # Build the app
 RUN npm run build
 
-# Expose port
-EXPOSE 8080
+# Create temp directory for screenshots
+RUN mkdir -p ./temp && chmod 755 ./temp
 
 # Set environment
 ENV NODE_ENV=production
 
-# Define command to run the app
-CMD ["npm", "start"] 
+# Start the server with stdio transport
+CMD ["node", "build/index.js"] 
