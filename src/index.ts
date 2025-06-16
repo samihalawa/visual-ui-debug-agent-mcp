@@ -357,7 +357,7 @@ class AIVisionDebugServer {
       
       // Wait for selector if specified
       if (waitForSelector) {
-        await page.waitForSelector(waitForSelector, { timeout: 10000 });
+        await page.waitForSelector(waitForSelector, { timeout: parseInt(process.env.DEFAULT_TIMEOUT || "20000") });
       }
       
       // Generate a UUID for the file
@@ -478,7 +478,7 @@ class AIVisionDebugServer {
       
       // Wait for selector if specified
       if (waitForSelector) {
-        await page.waitForSelector(waitForSelector, { timeout: 10000 });
+        await page.waitForSelector(waitForSelector, { timeout: parseInt(process.env.DEFAULT_TIMEOUT || "20000") });
       }
       
       // Get page title

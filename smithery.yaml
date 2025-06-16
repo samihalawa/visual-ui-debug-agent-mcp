@@ -21,6 +21,12 @@ startCommand:
         type: string
         description: "Directory to store screenshots"
         default: "./temp"
+      timeout:
+        type: number
+        description: "Default timeout for operations in milliseconds"
+        default: 20000
+        minimum: 5000
+        maximum: 120000
   commandFunction: |-
     (config) => ({ 
       command: 'node', 
@@ -29,6 +35,7 @@ startCommand:
         DEBUG: config.debug ? 'true' : 'false',
         HEADLESS: config.headless ? 'true' : 'false', 
         MAX_CONCURRENT_SESSIONS: config.maxConcurrentSessions?.toString() || '5',
-        SCREENSHOT_DIR: config.screenshotDir || './temp'
+        SCREENSHOT_DIR: config.screenshotDir || './temp',
+        DEFAULT_TIMEOUT: config.timeout?.toString() || '20000'
       } 
     })
