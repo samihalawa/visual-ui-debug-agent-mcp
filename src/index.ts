@@ -357,7 +357,7 @@ class AIVisionDebugServer {
       
       // Wait for selector if specified
       if (waitForSelector) {
-        await page.waitForSelector(waitForSelector, { timeout: parseInt(process.env.DEFAULT_TIMEOUT || "20000") });
+        await page.waitForSelector(waitForSelector, { timeout: parseInt(process.env.DEFAULT_TIMEOUT || "4000") });
       }
       
       // Generate a UUID for the file
@@ -478,7 +478,7 @@ class AIVisionDebugServer {
       
       // Wait for selector if specified
       if (waitForSelector) {
-        await page.waitForSelector(waitForSelector, { timeout: parseInt(process.env.DEFAULT_TIMEOUT || "20000") });
+        await page.waitForSelector(waitForSelector, { timeout: parseInt(process.env.DEFAULT_TIMEOUT || "4000") });
       }
       
       // Get page title
@@ -3604,7 +3604,7 @@ class AIVisionDebugServer {
                 
                 await page.goto(args.url, { 
                     waitUntil: args.waitUntil || 'networkidle', 
-                    timeout: args.timeout || 30000 // Default 30s timeout
+                    timeout: args.timeout || 4000 // Default 4s timeout
                 });
                 debugSession.currentUrl = page.url(); // Update current URL
                 return { content: [{ type: 'text', text: `Navigated to ${page.url()}` }] };
@@ -4277,12 +4277,12 @@ class AIVisionDebugServer {
               break;
             case 'verifyElementVisible':
               if (!step.selector) throw new Error('Selector is required for verifyElementVisible');
-              await page.waitForSelector(step.selector, { state: 'visible', timeout: 5000 });
+              await page.waitForSelector(step.selector, { state: 'visible', timeout: 4000 });
               stepDetails = `Verified element visible: ${step.selector}`;
               break;
             case 'verifyElementNotVisible':
               if (!step.selector) throw new Error('Selector is required for verifyElementNotVisible');
-              await page.waitForSelector(step.selector, { state: 'hidden', timeout: 5000 });
+              await page.waitForSelector(step.selector, { state: 'hidden', timeout: 4000 });
               stepDetails = `Verified element not visible: ${step.selector}`;
               break;
             case 'verifyUrl':

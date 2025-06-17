@@ -24,8 +24,8 @@ startCommand:
       timeout:
         type: number
         description: "Default timeout for operations in milliseconds"
-        default: 20000
-        minimum: 5000
+        default: 4000
+        minimum: 1000
         maximum: 120000
   commandFunction: |-
     (config) => ({ 
@@ -36,6 +36,6 @@ startCommand:
         HEADLESS: config.headless ? 'true' : 'false', 
         MAX_CONCURRENT_SESSIONS: config.maxConcurrentSessions?.toString() || '5',
         SCREENSHOT_DIR: config.screenshotDir || './temp',
-        DEFAULT_TIMEOUT: config.timeout?.toString() || '20000'
+        DEFAULT_TIMEOUT: config.timeout?.toString() || '4000'
       } 
     })
