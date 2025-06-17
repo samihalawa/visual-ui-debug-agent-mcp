@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/samihalawa-visual-ui-debug-agent-mcp-badge.png)](https://mseep.ai/app/samihalawa-visual-ui-debug-agent-mcp)
+
 # VUDA: Visual UI Debug Agent
 
 <a href="https://ibb.co/YTWc0mMQ"><img src="https://i.ibb.co/TqT4W6S2/VUDAbanner.png" alt="VUDAbanner" border="0"></a>
