@@ -70,6 +70,10 @@ let apiContext: import('playwright').APIRequestContext | null = null;
 const consoleLogs: string[] = [];
 const screenshots = new Map<string, string>();
 
+// Debug memory storage
+const debugMemory = new Map<string, any>();
+const tunnelUrls = new Map<number, string>();
+
 // Define types for console messages
 interface ConsoleMessage {
   type: string;
@@ -205,6 +209,21 @@ const UIWorkflowValidatorSchema = z.object({
   device: z.string().optional().describe("Optional device to emulate (e.g., 'iPhone 13', 'Pixel 5')")
 });
 // <<< END INSERTION: UI Workflow Validator Schema >>>
+
+// Add schema for tunnel helper
+const TunnelHelperSchema = z.object({
+  localPort: z.number().describe("Local port number to expose (e.g., 3000, 8080)"),
+  action: z.enum(["guide", "store", "retrieve"]).describe("Action to perform: 'guide' shows instructions, 'store' saves tunnel URL, 'retrieve' gets saved URL"),
+  tunnelUrl: z.string().optional().describe("Tunnel URL to store (only for 'store' action)")
+});
+
+// Add schema for debug memory
+const DebugMemorySchema = z.object({
+  action: z.enum(["save", "retrieve", "list", "clear"]).describe("Memory action to perform"),
+  key: z.string().optional().describe("Memory key for save/retrieve operations"),
+  value: z.any().optional().describe("Value to save (for 'save' action)"),
+  category: z.enum(["env", "urls", "selectors", "issues", "fixes", "general"]).optional().describe("Category of memory item")
+});
 
 // Create a class to manage the debug state and tools
 class AIVisionDebugServer {
@@ -2518,8 +2537,63 @@ class AIVisionDebugServer {
               },
               required: ['startUrl', 'taskDescription', 'steps']
             }
-        }
+        },
         // <<< END INSERTION: UI Workflow Validator Tool Definition >>>
+        {
+          name: 'tunnel_helper',
+          description: 'Guide user to expose local ports via Cloudflare tunnel or manage tunnel URLs',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              localPort: {
+                type: 'number',
+                description: 'Local port number to expose (e.g., 3000, 8080)'
+              },
+              action: {
+                type: 'string',
+                enum: ['guide', 'store', 'retrieve'],
+                description: 'Action: guide (show instructions), store (save tunnel URL), retrieve (get saved URL)'
+              },
+              tunnelUrl: {
+                type: 'string',
+                description: 'Tunnel URL to store (only for store action)',
+                optional: true
+              }
+            },
+            required: ['localPort', 'action']
+          }
+        },
+        {
+          name: 'debug_memory',
+          description: 'Save and retrieve debugging context including .env variables, selectors, and issues',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              action: {
+                type: 'string',
+                enum: ['save', 'retrieve', 'list', 'clear'],
+                description: 'Memory action to perform'
+              },
+              key: {
+                type: 'string',
+                description: 'Memory key for save/retrieve operations',
+                optional: true
+              },
+              value: {
+                type: 'object',
+                description: 'Value to save (for save action)',
+                optional: true
+              },
+              category: {
+                type: 'string',
+                enum: ['env', 'urls', 'selectors', 'issues', 'fixes', 'general'],
+                description: 'Category of memory item',
+                optional: true
+              }
+            },
+            required: ['action']
+          }
+        }
       ]
     }));
 
@@ -4233,6 +4307,255 @@ class AIVisionDebugServer {
           }
         }
         // <<< END INSERTION: UI Workflow Validator Implementation >>>
+        
+        case 'tunnel_helper': {
+          try {
+            const args = TunnelHelperSchema.parse(request.params.arguments);
+            const { localPort, action, tunnelUrl } = args;
+            
+            switch (action) {
+              case 'guide': {
+                // Generate instructions for the user
+                const instructions = `
+# Expose Local Port ${localPort} for Remote Access
+
+Since VUDA is running remotely, you need to expose your local port. Here are 3 options:
+
+## Option 1: Cloudflare Tunnel (Recommended - No account needed)
+\`\`\`bash
+# Install cloudflared (if not already installed)
+# macOS: brew install cloudflared
+# Linux: Download from https://github.com/cloudflare/cloudflared/releases
+
+# Run the tunnel
+cloudflared tunnel --url http://localhost:${localPort}
+\`\`\`
+
+This will output a URL like: https://example-random.trycloudflare.com
+
+## Option 2: ngrok (Requires free account)
+\`\`\`bash
+# Install ngrok from https://ngrok.com/download
+# Run the tunnel
+ngrok http ${localPort}
+\`\`\`
+
+## Option 3: localtunnel (npm package)
+\`\`\`bash
+# Install localtunnel
+npm install -g localtunnel
+
+# Run the tunnel
+lt --port ${localPort}
+\`\`\`
+
+## Next Steps:
+1. Copy the generated tunnel URL
+2. Use tunnel_helper with action='store' to save it:
+   tunnel_helper({ localPort: ${localPort}, action: 'store', tunnelUrl: 'YOUR_TUNNEL_URL' })
+3. VUDA will use this URL for all subsequent operations on port ${localPort}
+`;
+                
+                return {
+                  content: [{
+                    type: 'text',
+                    text: instructions
+                  }]
+                };
+              }
+              
+              case 'store': {
+                if (!tunnelUrl) {
+                  throw new McpError(
+                    ErrorCode.InvalidParams,
+                    'tunnelUrl is required for store action'
+                  );
+                }
+                
+                // Store the tunnel URL
+                tunnelUrls.set(localPort, tunnelUrl);
+                
+                // Also save to debug memory for persistence
+                debugMemory.set(`tunnel_${localPort}`, {
+                  port: localPort,
+                  url: tunnelUrl,
+                  timestamp: new Date().toISOString()
+                });
+                
+                return {
+                  content: [{
+                    type: 'text',
+                    text: `✅ Tunnel URL stored for port ${localPort}: ${tunnelUrl}\n\nYou can now use this URL in place of http://localhost:${localPort} for all VUDA operations.`
+                  }]
+                };
+              }
+              
+              case 'retrieve': {
+                const storedUrl = tunnelUrls.get(localPort);
+                
+                if (!storedUrl) {
+                  return {
+                    content: [{
+                      type: 'text',
+                      text: `No tunnel URL stored for port ${localPort}. Use action='guide' for instructions on creating a tunnel.`
+                    }]
+                  };
+                }
+                
+                return {
+                  content: [{
+                    type: 'text',
+                    text: `Tunnel URL for port ${localPort}: ${storedUrl}`
+                  }]
+                };
+              }
+            }
+          } catch (error: any) {
+            logToFile(`Error in tunnel_helper: ${error}`);
+            throw new McpError(
+              ErrorCode.InternalError,
+              `Tunnel helper failed: ${error.message}`
+            );
+          }
+        }
+        
+        case 'debug_memory': {
+          try {
+            const args = DebugMemorySchema.parse(request.params.arguments);
+            const { action, key, value, category } = args;
+            
+            switch (action) {
+              case 'save': {
+                if (!key) {
+                  throw new McpError(
+                    ErrorCode.InvalidParams,
+                    'key is required for save action'
+                  );
+                }
+                
+                const memoryItem = {
+                  key,
+                  value,
+                  category: category || 'general',
+                  timestamp: new Date().toISOString()
+                };
+                
+                debugMemory.set(key, memoryItem);
+                
+                return {
+                  content: [{
+                    type: 'text',
+                    text: `✅ Saved to debug memory:\nKey: ${key}\nCategory: ${memoryItem.category}\nTimestamp: ${memoryItem.timestamp}`
+                  }]
+                };
+              }
+              
+              case 'retrieve': {
+                if (!key) {
+                  throw new McpError(
+                    ErrorCode.InvalidParams,
+                    'key is required for retrieve action'
+                  );
+                }
+                
+                const item = debugMemory.get(key);
+                
+                if (!item) {
+                  return {
+                    content: [{
+                      type: 'text',
+                      text: `No memory found for key: ${key}`
+                    }]
+                  };
+                }
+                
+                return {
+                  content: [{
+                    type: 'text',
+                    text: JSON.stringify(item, null, 2)
+                  }]
+                };
+              }
+              
+              case 'list': {
+                const items: any[] = [];
+                const categoryFilter = category;
+                
+                debugMemory.forEach((item, key) => {
+                  if (!categoryFilter || item.category === categoryFilter) {
+                    items.push({
+                      key,
+                      category: item.category,
+                      timestamp: item.timestamp,
+                      preview: typeof item.value === 'string' 
+                        ? item.value.substring(0, 50) + (item.value.length > 50 ? '...' : '')
+                        : JSON.stringify(item.value).substring(0, 50) + '...'
+                    });
+                  }
+                });
+                
+                if (items.length === 0) {
+                  return {
+                    content: [{
+                      type: 'text',
+                      text: categoryFilter 
+                        ? `No items found in category: ${categoryFilter}`
+                        : 'Debug memory is empty'
+                    }]
+                  };
+                }
+                
+                return {
+                  content: [{
+                    type: 'text',
+                    text: `Debug Memory Items${categoryFilter ? ` (${categoryFilter})` : ''}:\n\n${items.map(item => 
+                      `📝 ${item.key}\n   Category: ${item.category}\n   Saved: ${item.timestamp}\n   Preview: ${item.preview}`
+                    ).join('\n\n')}`
+                  }]
+                };
+              }
+              
+              case 'clear': {
+                const size = debugMemory.size;
+                
+                if (category) {
+                  // Clear only specific category
+                  const keysToDelete: string[] = [];
+                  debugMemory.forEach((item, key) => {
+                    if (item.category === category) {
+                      keysToDelete.push(key);
+                    }
+                  });
+                  
+                  keysToDelete.forEach(key => debugMemory.delete(key));
+                  
+                  return {
+                    content: [{
+                      type: 'text',
+                      text: `✅ Cleared ${keysToDelete.length} items from category: ${category}`
+                    }]
+                  };
+                } else {
+                  // Clear all
+                  debugMemory.clear();
+                  
+                  return {
+                    content: [{
+                      type: 'text',
+                      text: `✅ Cleared all ${size} items from debug memory`
+                    }]
+                  };
+                }
+              }
+            }
+          } catch (error: any) {
+            logToFile(`Error in debug_memory: ${error}`);
+            throw new McpError(
+              ErrorCode.InternalError,
+              `Debug memory operation failed: ${error.message}`
+            );
+          }
+        }
         
         default:
           throw new McpError(

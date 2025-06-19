@@ -274,6 +274,65 @@ Complete set of low-level Playwright controls for precise automation:
 - `playwright_drag`: Drag and drop elements
 - `playwright_screenshot`: Take custom screenshots
 
+### Utility Tools
+
+#### 13. `tunnel_helper` 🚇
+
+Helps with exposing local ports via Cloudflare tunnel for remote debugging access.
+
+```javascript
+// Guide the user through tunnel setup
+const guide = await mcp.callTool("tunnel_helper", {
+  action: "guide",
+  port: 3000
+});
+
+// Store a tunnel URL for later use
+await mcp.callTool("tunnel_helper", {
+  action: "store",
+  port: 3000,
+  url: "https://example.trycloudflare.com"
+});
+
+// Retrieve stored tunnel URLs
+const tunnels = await mcp.callTool("tunnel_helper", {
+  action: "retrieve"
+});
+```
+
+#### 14. `debug_memory` 💾
+
+Saves and retrieves debugging context, environment variables, and important findings.
+
+```javascript
+// Save debugging context
+await mcp.callTool("debug_memory", {
+  action: "save",
+  key: "api_config",
+  data: {
+    baseUrl: "https://api.example.com",
+    apiKey: "sk-123...",
+    endpoints: ["/users", "/products"]
+  }
+});
+
+// Retrieve saved context
+const config = await mcp.callTool("debug_memory", {
+  action: "retrieve",
+  key: "api_config"
+});
+
+// List all saved items
+const allItems = await mcp.callTool("debug_memory", {
+  action: "list"
+});
+
+// Clear all saved data
+await mcp.callTool("debug_memory", {
+  action: "clear"
+});
+```
+
 ## Autonomous Debugging Workflows
 
 VUDA can autonomously perform complete debugging workflows by combining tools. For example:
