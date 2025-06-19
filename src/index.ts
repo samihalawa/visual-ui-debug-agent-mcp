@@ -300,6 +300,10 @@ class AIVisionDebugServer {
       
       activePage = await browserContext.newPage();
       
+      // Set default timeout to 4 seconds for all operations
+      activePage.setDefaultTimeout(4000);
+      activePage.setDefaultNavigationTimeout(4000);
+      
       // Set up console logging
       activePage.on('console', (message: import('playwright').ConsoleMessage) => {
         const logEntry = `[${message.type()}] ${message.text()}`;
@@ -349,15 +353,18 @@ class AIVisionDebugServer {
       // Ensure browser is initialized with proper viewport
       const page = await this.ensureBrowser(1280, 800, deviceName);
       
-      // Navigate to the URL
-      await page.goto(url, { waitUntil: 'networkidle' });
+      // Navigate to the URL with timeout
+      await page.goto(url, { 
+        waitUntil: 'domcontentloaded',
+        timeout: 4000
+      });
       
       // Wait for specified time
-      await page.waitForTimeout(waitTime);
+      await page.waitForTimeout(Math.min(waitTime, 4000));
       
       // Wait for selector if specified
       if (waitForSelector) {
-        await page.waitForSelector(waitForSelector, { timeout: parseInt(process.env.DEFAULT_TIMEOUT || "4000") });
+        await page.waitForSelector(waitForSelector, { timeout: 4000 });
       }
       
       // Generate a UUID for the file
@@ -468,17 +475,20 @@ class AIVisionDebugServer {
       // Measure page load time
       const startTime = Date.now();
       
-      // Navigate to the URL
-      await page.goto(url, { waitUntil: 'networkidle' });
+      // Navigate to the URL with timeout
+      await page.goto(url, { 
+        waitUntil: 'domcontentloaded',
+        timeout: 4000
+      });
       
       const loadTime = Date.now() - startTime;
       
       // Wait for specified time
-      await page.waitForTimeout(waitTime);
+      await page.waitForTimeout(Math.min(waitTime, 4000));
       
       // Wait for selector if specified
       if (waitForSelector) {
-        await page.waitForSelector(waitForSelector, { timeout: parseInt(process.env.DEFAULT_TIMEOUT || "4000") });
+        await page.waitForSelector(waitForSelector, { timeout: 4000 });
       }
       
       // Get page title
@@ -1214,11 +1224,14 @@ class AIVisionDebugServer {
       // Ensure browser is initialized
       const page = await this.ensureBrowser();
       
-      // Navigate to the URL
-      await page.goto(url, { waitUntil: 'networkidle' });
+      // Navigate to the URL with timeout
+      await page.goto(url, { 
+        waitUntil: 'domcontentloaded',
+        timeout: 4000
+      });
       
       // Wait for specified time
-      await page.waitForTimeout(waitTime);
+      await page.waitForTimeout(Math.min(waitTime, 4000));
       
       // Check if element exists
       const elementHandle = await page.$(selector);
@@ -1383,8 +1396,11 @@ class AIVisionDebugServer {
         }
       });
       
-      // Navigate to the URL
-      await page.goto(url, { waitUntil: 'networkidle' });
+      // Navigate to the URL with timeout
+      await page.goto(url, { 
+        waitUntil: 'domcontentloaded',
+        timeout: 4000
+      });
       
       // Perform interaction if requested
       if (interactionSelector) {
