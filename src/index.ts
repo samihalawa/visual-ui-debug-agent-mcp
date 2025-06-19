@@ -1850,6 +1850,18 @@ class AIVisionDebugServer {
           mimeType: "text/plain",
           name: "Browser console logs",
         },
+        {
+          uri: "prompt://visual-debugging",
+          mimeType: "text/markdown",
+          name: "Visual Debugging Protocol Guide",
+          description: "Core workflow patterns and best practices for visual UI debugging"
+        },
+        {
+          uri: "prompt://ui-debug",
+          mimeType: "text/markdown",
+          name: "Comprehensive UI/UX Debugging Prompt",
+          description: "5-section debugging process for thorough UI/UX testing"
+        },
         ...Array.from(screenshots.keys()).map(name => ({
           uri: `screenshot://${name}`,
           mimeType: "image/png",
@@ -1884,6 +1896,41 @@ class AIVisionDebugServer {
               blob: screenshot,
             }],
           };
+        }
+      }
+      
+      if (uri.startsWith("prompt://")) {
+        const promptName = uri.replace("prompt://", "");
+        let promptContent: string;
+        
+        try {
+          switch (promptName) {
+            case "visual-debugging":
+              promptContent = await fsPromises.readFile(
+                path.join(__dirname, "../prompts/visual-debugging.md"),
+                "utf-8"
+              );
+              break;
+            case "ui-debug":
+              promptContent = await fsPromises.readFile(
+                path.join(__dirname, "../src/prompt-templates/ui-debug-prompt.md"),
+                "utf-8"
+              );
+              break;
+            default:
+              throw new Error(`Unknown prompt: ${promptName}`);
+          }
+          
+          return {
+            contents: [{
+              uri,
+              mimeType: "text/markdown",
+              text: promptContent,
+            }],
+          };
+        } catch (error) {
+          logToFile(`Error reading prompt file: ${error}`);
+          throw new Error(`Failed to read prompt: ${promptName}`);
         }
       }
       
