@@ -1862,6 +1862,12 @@ class AIVisionDebugServer {
           name: "Comprehensive UI/UX Debugging Prompt",
           description: "5-section debugging process for thorough UI/UX testing"
         },
+        {
+          uri: "prompt://iterative-debug-loop",
+          mimeType: "text/markdown",
+          name: "VUDA Iterative Debug Loop Protocol",
+          description: "Automatic execution loop for systematic debugging with task management"
+        },
         ...Array.from(screenshots.keys()).map(name => ({
           uri: `screenshot://${name}`,
           mimeType: "image/png",
@@ -1914,6 +1920,12 @@ class AIVisionDebugServer {
             case "ui-debug":
               promptContent = await fsPromises.readFile(
                 path.join(__dirname, "../src/prompt-templates/ui-debug-prompt.md"),
+                "utf-8"
+              );
+              break;
+            case "iterative-debug-loop":
+              promptContent = await fsPromises.readFile(
+                path.join(__dirname, "../prompts/iterative-debug-loop.md"),
                 "utf-8"
               );
               break;
