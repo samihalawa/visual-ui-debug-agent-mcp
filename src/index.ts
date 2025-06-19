@@ -1115,7 +1115,10 @@ class AIVisionDebugServer {
               break;
             case 'navigate':
               if (!currentStep.url) throw new Error('URL is required for navigate action');
-              await page.goto(currentStep.url, { waitUntil: 'networkidle' });
+              await page.goto(currentStep.url, { 
+                waitUntil: 'domcontentloaded',
+                timeout: 4000
+              });
               success = true;
               break;
             case 'evaluate':
