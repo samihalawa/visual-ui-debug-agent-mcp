@@ -1,6 +1,6 @@
 {
   "name": "visual-ui-debug-agent-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "VUDA: Visual UI Debug Agent - An autonomous MCP for visual testing and debugging of user interfaces",
   "main": "build/index.js",
   "type": "module",
