@@ -58,7 +58,7 @@ const EnhancedPageAnalyzerSchema = z.object({
     mapElements: z.boolean().optional().describe("Whether to map interactive elements. Default: true"),
     fullPage: z.boolean().optional().describe("Whether to capture full page or just viewport. Default: false"),
     waitForSelector: z.string().optional().describe("Optional CSS selector to wait for before analysis"),
-    waitTime: z.number().optional().describe("Time to wait in milliseconds before analysis. Default: 3000"),
+    waitTime: z.number().optional().describe("Time to wait in milliseconds before analysis. Default: 4000"),
     device: z.string().optional().describe("Optional device to emulate (e.g., 'iPhone 13', 'Pixel 5')")
 });
 // Add schema for API endpoint tester
@@ -93,7 +93,7 @@ const ScreenshotUrlSchema = z.object({
     fullPage: z.boolean().optional().describe("Whether to capture full page or just viewport. Default: false"),
     selector: z.string().optional().describe("Optional CSS selector to screenshot only that element"),
     waitForSelector: z.string().optional().describe("Optional CSS selector to wait for before taking screenshot"),
-    waitTime: z.number().optional().describe("Time to wait in milliseconds before taking screenshot. Default: 1000"),
+    waitTime: z.number().optional().describe("Time to wait in milliseconds before taking screenshot. Default: 4000"),
     device: z.string().optional().describe("Optional device to emulate (e.g., 'iPhone 13', 'Pixel 5')")
 });
 // Add schema for DOM inspection
@@ -102,13 +102,13 @@ const DomInspectorSchema = z.object({
     selector: z.string().describe("CSS selector to inspect"),
     includeChildren: z.boolean().optional().describe("Whether to include children elements. Default: false"),
     includeStyles: z.boolean().optional().describe("Whether to include computed styles. Default: true"),
-    waitTime: z.number().optional().describe("Time to wait in milliseconds before inspecting. Default: 1000")
+    waitTime: z.number().optional().describe("Time to wait in milliseconds before inspecting. Default: 4000")
 });
 // Add schema for console monitor
 const ConsoleMonitorSchema = z.object({
     url: z.string().describe("URL to monitor console logs from"),
     filterTypes: z.array(z.enum(["log", "info", "warning", "error"])).optional().describe("Types of console messages to capture"),
-    duration: z.number().optional().describe("How long to monitor in milliseconds. Default: 5000"),
+    duration: z.number().optional().describe("How long to monitor in milliseconds. Default: 4000"),
     interactionSelector: z.string().optional().describe("Optional element to click before monitoring")
 });
 // Add schema for accessibility check
@@ -279,7 +279,7 @@ class AIVisionDebugServer {
     /**
      * Take a screenshot of a URL using Playwright
      */
-    async screenshotUrl(url, fullPage = false, selector, waitForSelector, waitTime = 1000, deviceName) {
+    async screenshotUrl(url, fullPage = false, selector, waitForSelector, waitTime = 4000, deviceName) {
         try {
             logToFile(`Taking screenshot of URL: ${url}`);
             // Ensure browser is initialized with proper viewport
@@ -333,7 +333,7 @@ class AIVisionDebugServer {
     /**
      * Enhanced Page Analyzer tool that combines screenshot, console logs, and interactive element mapping
      */
-    async enhancedPageAnalyzer(url, includeConsole = true, mapElements = true, fullPage = false, waitForSelector, waitTime = 3000, deviceName) {
+    async enhancedPageAnalyzer(url, includeConsole = true, mapElements = true, fullPage = false, waitForSelector, waitTime = 4000, deviceName) {
         try {
             logToFile(`Analyzing page: ${url}`);
             // Ensure browser is initialized with proper viewport
@@ -784,7 +784,7 @@ class AIVisionDebugServer {
                 serverErrors: results.filter(r => r.status >= 500 && r.status < 600).length,
                 clientErrors: results.filter(r => r.status >= 400 && r.status < 500).length,
                 connectionErrors: results.filter(r => r.status === 0).length,
-                responseTimeouts: results.filter(r => r.responseTime > 5000).length,
+                responseTimeouts: results.filter(r => r.responseTime > 4000).length,
             };
             logToFile(`API testing completed with ${successfulRequests}/${results.length} successful endpoints`);
             return {
@@ -871,7 +871,7 @@ class AIVisionDebugServer {
                             success = true;
                             break;
                         case 'wait':
-                            await page.waitForTimeout(currentStep.waitTime || 1000);
+                            await page.waitForTimeout(currentStep.waitTime || 4000);
                             success = true;
                             break;
                         case 'navigate':
@@ -895,7 +895,7 @@ class AIVisionDebugServer {
                             throw new Error(`Unknown action: ${currentStep.action}`);
                     }
                     // Wait for any potential navigation or Ajax calls
-                    await page.waitForTimeout(1000);
+                    await page.waitForTimeout(4000);
                     // Capture screenshot if requested
                     let screenshotPath, screenshotBase64;
                     if (captureScreenshots) {
@@ -954,7 +954,7 @@ class AIVisionDebugServer {
     /**
      * DOM Inspector tool
      */
-    async inspectDomElement(url, selector, includeChildren = false, includeStyles = true, waitTime = 1000) {
+    async inspectDomElement(url, selector, includeChildren = false, includeStyles = true, waitTime = 4000) {
         try {
             logToFile(`Inspecting DOM element: ${selector} at ${url}`);
             // Ensure browser is initialized
@@ -1070,7 +1070,7 @@ class AIVisionDebugServer {
     /**
      * Console Monitor tool
      */
-    async monitorConsole(url, filterTypes = ['log', 'info', 'warning', 'error'], duration = 5000, interactionSelector) {
+    async monitorConsole(url, filterTypes = ['log', 'info', 'warning', 'error'], duration = 4000, interactionSelector) {
         try {
             logToFile(`Monitoring console at ${url}`);
             // Ensure browser is initialized
@@ -1239,7 +1239,7 @@ class AIVisionDebugServer {
             }
             // Generate recommendations
             const recommendations = [];
-            if (avgLoadTime > 3000) {
+            if (avgLoadTime > 4000) {
                 recommendations.push('Page load time exceeds 3 seconds. Consider optimizing for faster loading.');
             }
             if (avgResourceCount > 50) {
@@ -1288,7 +1288,7 @@ class AIVisionDebugServer {
             const page = await this.ensureBrowser();
             // Take screenshot of first URL
             await page.goto(url1, { waitUntil: 'networkidle' });
-            await page.waitForTimeout(1000);
+            await page.waitForTimeout(4000);
             const fileUuid1 = randomUUID();
             const screenshotPath1 = path.join(TEMP_DIR, `compare1_${fileUuid1}.png`);
             if (selector) {
@@ -1306,7 +1306,7 @@ class AIVisionDebugServer {
             }
             // Take screenshot of second URL
             await page.goto(url2, { waitUntil: 'networkidle' });
-            await page.waitForTimeout(1000);
+            await page.waitForTimeout(4000);
             const fileUuid2 = randomUUID();
             const screenshotPath2 = path.join(TEMP_DIR, `compare2_${fileUuid2}.png`);
             if (selector) {
@@ -1546,7 +1546,7 @@ class AIVisionDebugServer {
                             },
                             waitTime: {
                                 type: 'number',
-                                description: 'Time to wait in milliseconds before analysis. Default: 3000'
+                                description: 'Time to wait in milliseconds before analysis. Default: 4000'
                             },
                             device: {
                                 type: 'string',
@@ -1686,7 +1686,7 @@ class AIVisionDebugServer {
                             },
                             waitTime: {
                                 type: 'number',
-                                description: 'Time to wait in milliseconds before taking screenshot. Default: 1000'
+                                description: 'Time to wait in milliseconds before taking screenshot. Default: 4000'
                             },
                             device: {
                                 type: 'string',
@@ -1720,7 +1720,7 @@ class AIVisionDebugServer {
                             },
                             waitTime: {
                                 type: 'number',
-                                description: 'Time to wait in milliseconds before inspecting. Default: 1000'
+                                description: 'Time to wait in milliseconds before inspecting. Default: 4000'
                             }
                         },
                         required: ['url', 'selector']
@@ -1746,7 +1746,7 @@ class AIVisionDebugServer {
                             },
                             duration: {
                                 type: 'number',
-                                description: 'How long to monitor in milliseconds. Default: 5000'
+                                description: 'How long to monitor in milliseconds. Default: 4000'
                             },
                             interactionSelector: {
                                 type: 'string',
@@ -1838,7 +1838,7 @@ class AIVisionDebugServer {
                             },
                             waitTime: {
                                 type: 'number',
-                                description: 'Time to wait in milliseconds before taking each screenshot. Default: 1000'
+                                description: 'Time to wait in milliseconds before taking each screenshot. Default: 4000'
                             },
                             gridSize: {
                                 type: 'number',
@@ -2168,7 +2168,7 @@ class AIVisionDebugServer {
                             throw new McpError(ErrorCode.InvalidParams, `Invalid URL format: ${args.url}`);
                         }
                         // Analyze the page
-                        const result = await this.enhancedPageAnalyzer(args.url, args.includeConsole !== false, args.mapElements !== false, args.fullPage || false, args.waitForSelector, args.waitTime || 3000, args.device);
+                        const result = await this.enhancedPageAnalyzer(args.url, args.includeConsole !== false, args.mapElements !== false, args.fullPage || false, args.waitForSelector, args.waitTime || 4000, args.device);
                         // Create content array
                         const content = [
                             {
@@ -2561,7 +2561,7 @@ class AIVisionDebugServer {
                             throw new McpError(ErrorCode.InvalidParams, `Invalid URL format: ${errorMessage}`);
                         }
                         // Take screenshot
-                        const screenshot = await this.screenshotUrl(args.url, args.fullPage || false, args.selector, args.waitForSelector, args.waitTime || 1000, args.device);
+                        const screenshot = await this.screenshotUrl(args.url, args.fullPage || false, args.selector, args.waitForSelector, args.waitTime || 4000, args.device);
                         return {
                             content: [
                                 {
@@ -2604,7 +2604,7 @@ class AIVisionDebugServer {
                             throw new McpError(ErrorCode.InvalidParams, `Invalid URL format: ${errorMessage}`);
                         }
                         // Inspect DOM element
-                        const result = await this.inspectDomElement(args.url, args.selector, args.includeChildren || false, args.includeStyles !== false, args.waitTime || 1000);
+                        const result = await this.inspectDomElement(args.url, args.selector, args.includeChildren || false, args.includeStyles !== false, args.waitTime || 4000);
                         // Create content array
                         const content = [
                             {
@@ -2729,12 +2729,12 @@ class AIVisionDebugServer {
                             throw new McpError(ErrorCode.InvalidParams, `Invalid URL format: ${errorMessage}`);
                         }
                         // Monitor console
-                        const result = await this.monitorConsole(args.url, args.filterTypes || ['log', 'info', 'warning', 'error'], args.duration || 5000, args.interactionSelector);
+                        const result = await this.monitorConsole(args.url, args.filterTypes || ['log', 'info', 'warning', 'error'], args.duration || 4000, args.interactionSelector);
                         // Create content array
                         const content = [
                             {
                                 type: "text",
-                                text: `# Console Monitoring: ${args.url}\n\nMonitored for ${args.duration || 5000}ms\nCaptured ${result.messages.length} console messages\n`
+                                text: `# Console Monitoring: ${args.url}\n\nMonitored for ${args.duration || 4000}ms\nCaptured ${result.messages.length} console messages\n`
                             }
                         ];
                         // Add screenshot
@@ -3692,8 +3692,8 @@ lt --port ${localPort}
                             stepDetails = `Hovered ${step.selector}`;
                             break;
                         case 'wait':
-                            await page.waitForTimeout(step.waitTime || 1000);
-                            stepDetails = `Waited ${step.waitTime || 1000}ms`;
+                            await page.waitForTimeout(step.waitTime || 4000);
+                            stepDetails = `Waited ${step.waitTime || 4000}ms`;
                             break;
                         case 'evaluate':
                             if (!step.script)
