@@ -46,6 +46,15 @@ function logToFile(message: string): void {
   }
 }
 
+// Simple UUID generator
+function generateUuid(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 // Session state to track current debugging session
 interface DebugSession {
   currentUrl: string | null;
@@ -101,11 +110,10 @@ interface InteractiveElement {
 // Add schema for enhanced page analyzer
 const EnhancedPageAnalyzerSchema = z.object({
   url: z.string().describe("URL to analyze (e.g., http://localhost:4999, https://example.com)"),
-  includeConsole: z.boolean().optional().describe("Whether to include console logs. Default: true"),
-  mapElements: z.boolean().optional().describe("Whether to map interactive elements. Default: true"),
-  fullPage: z.boolean().optional().describe("Whether to capture full page or just viewport. Default: false"),
+  includeConsole: z.boolean().optional().default(true).describe("Whether to include console logs. Default: true"),
+  mapElements: z.boolean().optional().default(true).describe("Whether to map interactive elements. Default: true"),
+  fullPage: z.boolean().optional().default(false).describe("Whether to capture full page or just viewport. Default: false"),
   waitForSelector: z.string().optional().describe("Optional CSS selector to wait for before analysis"),
-  waitTime: z.number().optional().describe("Time to wait in milliseconds before analysis. Default: 4000"),
   device: z.string().optional().describe("Optional device to emulate (e.g., 'iPhone 13', 'Pixel 5')")
 });
 
@@ -129,21 +137,19 @@ const NavigationFlowValidatorSchema = z.object({
     selector: z.string().optional().describe("CSS selector for the element to interact with"),
     value: z.string().optional().describe("Value to input (for fill or select action)"),
     url: z.string().optional().describe("URL to navigate to (for navigate action)"),
-    script: z.string().optional().describe("JavaScript to evaluate (for evaluate action)"),
-    waitTime: z.number().optional().describe("Time to wait in ms (for wait action)")
+    script: z.string().optional().describe("JavaScript to evaluate (for evaluate action)")
   })).describe("Sequence of steps to perform"),
-  captureScreenshots: z.boolean().optional().describe("Whether to capture screenshots after each step. Default: true"),
-  includeConsole: z.boolean().optional().describe("Whether to include console logs. Default: true"),
+  captureScreenshots: z.boolean().optional().default(true).describe("Whether to capture screenshots after each step. Default: true"),
+  includeConsole: z.boolean().optional().default(true).describe("Whether to include console logs. Default: true"),
   device: z.string().optional().describe("Optional device to emulate (e.g., 'iPhone 13', 'Pixel 5')")
 });
 
 // Add schema for screenshot URL
 const ScreenshotUrlSchema = z.object({
   url: z.string().describe("URL to capture a screenshot of (e.g., http://localhost:4999, https://example.com)"),
-  fullPage: z.boolean().optional().describe("Whether to capture full page or just viewport. Default: false"),
+  fullPage: z.boolean().optional().default(false).describe("Whether to capture full page or just viewport. Default: false"),
   selector: z.string().optional().describe("Optional CSS selector to screenshot only that element"),
   waitForSelector: z.string().optional().describe("Optional CSS selector to wait for before taking screenshot"),
-  waitTime: z.number().optional().describe("Time to wait in milliseconds before taking screenshot. Default: 4000"),
   device: z.string().optional().describe("Optional device to emulate (e.g., 'iPhone 13', 'Pixel 5')")
 });
 
@@ -151,9 +157,8 @@ const ScreenshotUrlSchema = z.object({
 const DomInspectorSchema = z.object({
   url: z.string().describe("URL to inspect (e.g., http://localhost:4999, https://example.com)"),
   selector: z.string().describe("CSS selector to inspect"),
-  includeChildren: z.boolean().optional().describe("Whether to include children elements. Default: false"),
-  includeStyles: z.boolean().optional().describe("Whether to include computed styles. Default: true"),
-  waitTime: z.number().optional().describe("Time to wait in milliseconds before inspecting. Default: 4000")
+  includeChildren: z.boolean().optional().default(false).describe("Whether to include children elements. Default: false"),
+  includeStyles: z.boolean().optional().default(true).describe("Whether to include computed styles. Default: true")
 });
 
 // Add schema for console monitor
@@ -202,7 +207,6 @@ const UIWorkflowValidatorSchema = z.object({
     value: z.string().optional().describe("Value for fill/select or text/URL to verify"),
     url: z.string().optional().describe("URL for navigate action or verification"),
     script: z.string().optional().describe("JavaScript for evaluate action"),
-    waitTime: z.number().optional().describe("Time to wait in ms (for wait action)"),
     isOptional: z.boolean().optional().default(false).describe("If true, failure of this step won't stop the workflow")
   })).min(1).describe("Sequence of steps representing the user workflow (minimum 1 step)"),
   captureScreenshots: z.enum(["all", "failure", "none"]).optional().default("failure").describe("When to capture screenshots"),
@@ -215,6 +219,14 @@ const TunnelHelperSchema = z.object({
   localPort: z.number().describe("Local port number to expose (e.g., 3000, 8080)"),
   action: z.enum(["guide", "store", "retrieve"]).describe("Action to perform: 'guide' shows instructions, 'store' saves tunnel URL, 'retrieve' gets saved URL"),
   tunnelUrl: z.string().optional().describe("Tunnel URL to store (only for 'store' action)")
+});
+
+// Add schema for batch screenshot URLs
+const BatchScreenshotUrlsSchema = z.object({
+  urls: z.array(z.string()).describe("Array of URLs to capture screenshots of"),
+  fullPage: z.boolean().optional().default(false).describe("Whether to capture full page or just viewport. Default: false"),
+  gridSize: z.number().optional().default(2).describe("Number of screenshots per row in the grid layout. Default: 2"),
+  device: z.string().optional().describe("Optional device to emulate (e.g., 'iPhone 13', 'Pixel 5')")
 });
 
 // Add schema for debug memory
@@ -363,7 +375,6 @@ class AIVisionDebugServer {
     fullPage: boolean = false,
     selector?: string,
     waitForSelector?: string,
-    waitTime: number = 4000,
     deviceName?: string
   ): Promise<{ path: string, fileUuid: string, base64Data: string }> {
     try {
@@ -379,7 +390,7 @@ class AIVisionDebugServer {
       });
       
       // Wait for specified time
-      await page.waitForTimeout(Math.min(waitTime, 4000));
+      await page.waitForTimeout(3000); // Fixed 3 second wait
       
       // Wait for selector if specified
       if (waitForSelector) {
@@ -435,7 +446,6 @@ class AIVisionDebugServer {
     mapElements: boolean = true,
     fullPage: boolean = false,
     waitForSelector?: string,
-    waitTime: number = 4000,
     deviceName?: string
   ): Promise<{
     screenshot: { path: string, base64Data: string },
@@ -503,7 +513,7 @@ class AIVisionDebugServer {
       const loadTime = Date.now() - startTime;
       
       // Wait for specified time
-      await page.waitForTimeout(Math.min(waitTime, 4000));
+      await page.waitForTimeout(3000); // Fixed 3 second wait
       
       // Wait for selector if specified
       if (waitForSelector) {
@@ -1129,7 +1139,7 @@ class AIVisionDebugServer {
               success = true;
               break;
             case 'wait':
-              await page.waitForTimeout(currentStep.waitTime || 4000);
+              await page.waitForTimeout(3000); // Fixed 3 second wait
               success = true;
               break;
             case 'navigate':
@@ -1217,14 +1227,149 @@ class AIVisionDebugServer {
   }
 
   /**
+   * Batch Screenshot URLs tool
+   */
+  private async batchScreenshotUrls(
+    urls: string[],
+    fullPage: boolean = false,
+    gridSize: number = 2,
+    deviceName?: string
+  ): Promise<{
+    screenshots: Array<{ url: string, path: string, base64Data: string, error?: string }>,
+    gridImagePath?: string,
+    gridImageBase64?: string
+  }> {
+    try {
+      logToFile(`Taking batch screenshots of ${urls.length} URLs`);
+      
+      const screenshots: Array<{ url: string, path: string, base64Data: string, error?: string }> = [];
+      
+      // Take individual screenshots
+      for (const url of urls) {
+        try {
+          const screenshot = await this.screenshotUrl(url, fullPage, undefined, undefined, deviceName);
+          screenshots.push({
+            url,
+            path: screenshot.path,
+            base64Data: screenshot.base64Data
+          });
+        } catch (error: any) {
+          logToFile(`Error taking screenshot of ${url}: ${error.message}`);
+          screenshots.push({
+            url,
+            path: '',
+            base64Data: '',
+            error: error.message
+          });
+        }
+      }
+      
+      // Create grid layout if we have successful screenshots
+      const successfulScreenshots = screenshots.filter(s => !s.error);
+      let gridImagePath: string | undefined;
+      let gridImageBase64: string | undefined;
+      
+      if (successfulScreenshots.length > 1) {
+        try {
+          // Create a simple grid layout using HTML and then screenshot it
+          const gridHtml = this.createGridHtml(successfulScreenshots, gridSize);
+          const gridPage = await browserInstance!.newPage();
+          
+          try {
+            await gridPage.setContent(gridHtml);
+            await gridPage.waitForTimeout(1000); // Wait for images to load
+            
+            const gridScreenshot = await gridPage.screenshot({ 
+              fullPage: true,
+              type: 'png'
+            });
+            
+            const gridFileUuid = generateUuid();
+            gridImagePath = path.join(process.cwd(), `grid_screenshot_${gridFileUuid}.png`);
+            fs.writeFileSync(gridImagePath, gridScreenshot);
+            gridImageBase64 = gridScreenshot.toString('base64');
+            
+          } finally {
+            await gridPage.close();
+          }
+        } catch (error: any) {
+          logToFile(`Error creating grid layout: ${error.message}`);
+        }
+      }
+      
+      return {
+        screenshots,
+        gridImagePath,
+        gridImageBase64
+      };
+      
+    } catch (error: any) {
+      logToFile(`Error in batch screenshot: ${error.message}`);
+      throw error;
+    }
+  }
+
+  private createGridHtml(screenshots: Array<{ url: string, base64Data: string }>, gridSize: number): string {
+    const gridItems = screenshots.map(screenshot => `
+      <div class="grid-item">
+        <img src="data:image/png;base64,${screenshot.base64Data}" alt="Screenshot" />
+        <div class="url-label">${screenshot.url}</div>
+      </div>
+    `).join('');
+    
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { 
+            margin: 20px; 
+            font-family: Arial, sans-serif; 
+            background: white;
+          }
+          .grid-container {
+            display: grid;
+            grid-template-columns: repeat(${gridSize}, 1fr);
+            gap: 20px;
+            max-width: 1200px;
+          }
+          .grid-item {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+          }
+          .grid-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+          }
+          .url-label {
+            padding: 10px;
+            background: #f5f5f5;
+            font-size: 12px;
+            word-break: break-all;
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="grid-container">
+          ${gridItems}
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  /**
    * DOM Inspector tool
    */
   private async inspectDomElement(
     url: string,
     selector: string,
     includeChildren: boolean = false,
-    includeStyles: boolean = true,
-    waitTime: number = 4000
+    includeStyles: boolean = true
   ): Promise<{
     element: {
       tagName: string;
@@ -1253,7 +1398,7 @@ class AIVisionDebugServer {
       });
       
       // Wait for specified time
-      await page.waitForTimeout(Math.min(waitTime, 4000));
+      await page.waitForTimeout(3000); // Fixed 3 second wait
       
       // Check if element exists
       const elementHandle = await page.$(selector);
@@ -1971,6 +2116,7 @@ class AIVisionDebugServer {
     // List tools handler
     this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: [
+        // === CORE VISUAL DEBUGGING TOOLS ===
         {
           name: 'enhanced_page_analyzer',
           description: 'Analyze a page with screenshots, console logs, interactive element mapping, and performance metrics',
@@ -1997,10 +2143,6 @@ class AIVisionDebugServer {
                 type: 'string',
                 description: 'Optional CSS selector to wait for before analysis'
               },
-              waitTime: {
-                type: 'number',
-                description: 'Time to wait in milliseconds before analysis. Default: 4000'
-              },
               device: {
                 type: 'string',
                 description: 'Optional device to emulate (e.g., "iPhone 13", "Pixel 5")'
@@ -2009,6 +2151,7 @@ class AIVisionDebugServer {
             required: ['url']
           }
         },
+        // === API & BACKEND TESTING TOOLS ===
         {
           name: 'api_endpoint_tester',
           description: 'Test multiple API endpoints and verify responses',
@@ -2054,6 +2197,7 @@ class AIVisionDebugServer {
             required: ['url', 'endpoints']
           }
         },
+        // === USER FLOW & INTERACTION TESTING ===
         {
           name: 'navigation_flow_validator',
           description: 'Test a sequence of user actions across multiple pages',
@@ -2090,10 +2234,6 @@ class AIVisionDebugServer {
                       type: 'string',
                       description: 'JavaScript to evaluate (for evaluate action)'
                     },
-                    waitTime: {
-                      type: 'number',
-                      description: 'Time to wait in ms (for wait action)'
-                    }
                   },
                   required: ['action']
                 },
@@ -2115,6 +2255,7 @@ class AIVisionDebugServer {
             required: ['startUrl', 'steps']
           }
         },
+        // === SCREENSHOT & VISUAL CAPTURE TOOLS ===
         {
           name: 'screenshot_url',
           description: 'Take a screenshot of a URL',
@@ -2137,10 +2278,6 @@ class AIVisionDebugServer {
                 type: 'string',
                 description: 'Optional CSS selector to wait for before taking screenshot'
               },
-              waitTime: {
-                type: 'number',
-                description: 'Time to wait in milliseconds before taking screenshot. Default: 4000'
-              },
               device: {
                 type: 'string',
                 description: 'Optional device to emulate (e.g., "iPhone 13", "Pixel 5")'
@@ -2149,6 +2286,7 @@ class AIVisionDebugServer {
             required: ['url']
           }
         },
+        // === DOM & ELEMENT INSPECTION TOOLS ===
         {
           name: 'dom_inspector',
           description: 'Inspect DOM elements and their properties',
@@ -2171,14 +2309,38 @@ class AIVisionDebugServer {
                 type: 'boolean',
                 description: 'Whether to include computed styles. Default: true'
               },
-              waitTime: {
-                type: 'number',
-                description: 'Time to wait in milliseconds before inspecting. Default: 4000'
-              }
             },
             required: ['url', 'selector']
           }
         },
+        {
+          name: 'batch_screenshot_urls',
+          description: 'Capture screenshots of multiple URLs in a grid layout for easy comparison',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              urls: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Array of URLs to capture screenshots of'
+              },
+              fullPage: {
+                type: 'boolean',
+                description: 'Whether to capture full page or just viewport. Default: false'
+              },
+              gridSize: {
+                type: 'number',
+                description: 'Number of screenshots per row in the grid layout. Default: 2'
+              },
+              device: {
+                type: 'string',
+                description: 'Optional device to emulate (e.g., "iPhone 13", "Pixel 5")'
+              }
+            },
+            required: ['urls']
+          }
+        },
+        // === CONSOLE & DEBUGGING TOOLS ===
         {
           name: 'console_monitor',
           description: 'Monitor console logs on a page',
@@ -2519,7 +2681,6 @@ class AIVisionDebugServer {
                       value: { type: 'string', description: 'Value for fill/select or text/URL to verify', optional: true },
                       url: { type: 'string', description: 'URL for navigate action or verification', optional: true },
                       script: { type: 'string', description: 'JavaScript for evaluate action', optional: true },
-                      waitTime: { type: 'number', description: 'Time to wait in ms (for wait action)', optional: true },
                       isOptional: { type: 'boolean', description: 'If true, failure of this step won\'t stop the workflow', optional: true, default: false }
                     },
                     required: ['description', 'action']
@@ -2539,6 +2700,7 @@ class AIVisionDebugServer {
             }
         },
         // <<< END INSERTION: UI Workflow Validator Tool Definition >>>
+        // === DEVELOPMENT & UTILITY TOOLS ===
         {
           name: 'tunnel_helper',
           description: 'Guide user to expose local ports via Cloudflare tunnel or manage tunnel URLs',
@@ -2680,7 +2842,6 @@ class AIVisionDebugServer {
               args.mapElements !== false,
               args.fullPage || false,
               args.waitForSelector,
-              args.waitTime || 4000,
               args.device
             );
             
@@ -3239,7 +3400,6 @@ class AIVisionDebugServer {
               args.fullPage || false,
               args.selector,
               args.waitForSelector,
-              args.waitTime || 4000,
               args.device
             );
             
@@ -3264,6 +3424,84 @@ class AIVisionDebugServer {
             throw new McpError(
               ErrorCode.InternalError,
               `Failed to capture screenshot: ${error?.message || 'Unknown error'}`
+            );
+          }
+        }
+        
+        case 'batch_screenshot_urls': {
+          try {
+            const args = BatchScreenshotUrlsSchema.parse(request.params.arguments);
+            
+            if (!args.urls || args.urls.length === 0) {
+              throw new McpError(
+                ErrorCode.InvalidParams,
+                'URLs array is required and cannot be empty'
+              );
+            }
+            
+            // Validate URL formats
+            for (const url of args.urls) {
+              try {
+                new URL(url);
+              } catch (error) {
+                throw new McpError(
+                  ErrorCode.InvalidParams,
+                  `Invalid URL format: ${url}`
+                );
+              }
+            }
+            
+            const result = await this.batchScreenshotUrls(
+              args.urls,
+              args.fullPage || false,
+              args.gridSize || 2,
+              args.device
+            );
+            
+            const content: any[] = [
+              {
+                type: "text",
+                text: `# Batch Screenshot Results\n\nProcessed ${result.screenshots.length} URLs\nSuccessful: ${result.screenshots.filter(s => !s.error).length}\nFailed: ${result.screenshots.filter(s => s.error).length}\n`
+              }
+            ];
+            
+            // Add grid image if available
+            if (result.gridImageBase64) {
+              content.push({
+                type: "image",
+                data: result.gridImageBase64,
+                mimeType: "image/png"
+              });
+            }
+            
+            // Add individual screenshots
+            for (const screenshot of result.screenshots) {
+              if (screenshot.error) {
+                content.push({
+                  type: "text",
+                  text: `❌ **${screenshot.url}**: ${screenshot.error}`
+                });
+              } else {
+                content.push({
+                  type: "text",
+                  text: `✅ **${screenshot.url}**`
+                });
+                content.push({
+                  type: "image", 
+                  data: screenshot.base64Data,
+                  mimeType: "image/png"
+                });
+              }
+            }
+            
+            return { content };
+          } catch (error: any) {
+            if (error instanceof McpError) {
+              throw error;
+            }
+            throw new McpError(
+              ErrorCode.InternalError,
+              `Failed to capture batch screenshots: ${error?.message || 'Unknown error'}`
             );
           }
         }
@@ -3310,8 +3548,7 @@ class AIVisionDebugServer {
               args.url,
               args.selector,
               args.includeChildren || false,
-              args.includeStyles !== false,
-              args.waitTime || 4000
+              args.includeStyles !== false
             );
             
             // Create content array
@@ -4170,12 +4407,7 @@ class AIVisionDebugServer {
                   }
                   break;
                 case 'wait':
-                  if (!step.waitTime) {
-                    throw new McpError(
-                      ErrorCode.InvalidParams,
-                      'Wait time is required for wait action'
-                    );
-                  }
+                  // Wait action uses fixed 3 second timeout
                   break;
                 case 'evaluate':
                   if (!step.script) {
@@ -4952,8 +5184,8 @@ lt --port ${localPort}
               stepDetails = `Hovered ${step.selector}`;
               break;
             case 'wait':
-              await page.waitForTimeout(step.waitTime || 4000);
-              stepDetails = `Waited ${step.waitTime || 4000}ms`;
+              await page.waitForTimeout(3000); // Fixed 3 second wait
+              stepDetails = `Waited 3000ms`;
               break;
             case 'evaluate':
               if (!step.script) throw new Error('Script is required for evaluate');
