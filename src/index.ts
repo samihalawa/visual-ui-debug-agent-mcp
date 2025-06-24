@@ -2593,6 +2593,41 @@ class AIVisionDebugServer {
             },
             required: ['action']
           }
+        },
+        {
+          name: 'sitemap_crawler',
+          description: 'Crawl a website recursively to generate a comprehensive sitemap with all endpoints, links, and visible text content. Perfect for detecting inconsistent content, broken links, and navigation issues.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              url: {
+                type: 'string',
+                description: 'Starting URL to crawl (e.g., http://localhost:3000, https://example.com)'
+              },
+              maxDepth: {
+                type: 'number',
+                description: 'Maximum depth to crawl (default: 3)',
+                optional: true
+              },
+              includeText: {
+                type: 'boolean',
+                description: 'Include visible text content from each page (default: true)',
+                optional: true
+              },
+              sameDomainOnly: {
+                type: 'boolean',
+                description: 'Only crawl links from the same domain (default: true)',
+                optional: true
+              },
+              outputFormat: {
+                type: 'string',
+                enum: ['json', 'markdown', 'text'],
+                description: 'Output format for the sitemap (default: markdown)',
+                optional: true
+              }
+            },
+            required: ['url']
+          }
         }
       ]
     }));
@@ -4553,6 +4588,270 @@ lt --port ${localPort}
             throw new McpError(
               ErrorCode.InternalError,
               `Debug memory operation failed: ${error.message}`
+            );
+          }
+        }
+        
+        case 'sitemap_crawler': {
+          try {
+            const args = request.params.arguments as {
+              url: string;
+              maxDepth?: number;
+              includeText?: boolean;
+              sameDomainOnly?: boolean;
+              outputFormat?: 'json' | 'markdown' | 'text';
+            };
+            
+            const {
+              url,
+              maxDepth = 3,
+              includeText = true,
+              sameDomainOnly = true,
+              outputFormat = 'markdown'
+            } = args;
+            
+            logToFile(`Starting sitemap crawl from: ${url}`);
+            
+            // Initialize crawler data
+            const visitedUrls = new Set<string>();
+            const brokenLinks = new Set<string>();
+            const sitemapData: Map<string, {
+              title: string;
+              links: string[];
+              text?: string;
+              status: number;
+              error?: string;
+            }> = new Map();
+            
+            // Parse base URL for domain checking
+            const baseUrl = new URL(url);
+            const baseDomain = baseUrl.hostname;
+            
+            // Recursive crawl function
+            async function crawlUrl(pageUrl: string, depth: number): Promise<void> {
+              if (depth > maxDepth || visitedUrls.has(pageUrl)) {
+                return;
+              }
+              
+              visitedUrls.add(pageUrl);
+              
+              try {
+                // Create new page for each crawl to avoid conflicts
+                const crawlPage = await browserInstance!.newPage();
+                
+                try {
+                  // Navigate with shorter timeout
+                  const response = await crawlPage.goto(pageUrl, {
+                    waitUntil: 'domcontentloaded',
+                    timeout: 4000
+                  });
+                  
+                  const status = response?.status() || 0;
+                  
+                  if (status >= 400) {
+                    brokenLinks.add(pageUrl);
+                  }
+                  
+                  // Wait a bit for dynamic content
+                  await crawlPage.waitForTimeout(1000);
+                  
+                  // Get page title
+                  const title = await crawlPage.title();
+                  
+                  // Get all links
+                  const links = await crawlPage.evaluate(() => {
+                    const anchors = Array.from(document.querySelectorAll('a[href]'));
+                    return anchors
+                      .map(a => {
+                        const href = (a as HTMLAnchorElement).href;
+                        try {
+                          const url = new URL(href);
+                          return url.href;
+                        } catch {
+                          return null;
+                        }
+                      })
+                      .filter(href => href !== null) as string[];
+                  });
+                  
+                  // Get visible text if requested
+                  let pageText = '';
+                  if (includeText) {
+                    pageText = await crawlPage.evaluate(() => {
+                      // Remove script and style elements
+                      const scripts = document.querySelectorAll('script, style');
+                      scripts.forEach(el => el.remove());
+                      
+                      // Get text content
+                      const text = document.body.innerText || document.body.textContent || '';
+                      
+                      // Clean up whitespace
+                      return text
+                        .split('\n')
+                        .map(line => line.trim())
+                        .filter(line => line.length > 0)
+                        .join('\n');
+                    });
+                  }
+                  
+                  // Store page data
+                  sitemapData.set(pageUrl, {
+                    title,
+                    links,
+                    text: pageText,
+                    status
+                  });
+                  
+                  // Filter links for crawling
+                  const linksToVisit = links.filter((link: string) => {
+                    try {
+                      const linkUrl = new URL(link);
+                      
+                      // Skip non-http(s) protocols
+                      if (!link.startsWith('http://') && !link.startsWith('https://')) {
+                        return false;
+                      }
+                      
+                      // Check same domain if required
+                      if (sameDomainOnly && linkUrl.hostname !== baseDomain) {
+                        return false;
+                      }
+                      
+                      // Skip already visited
+                      if (visitedUrls.has(link)) {
+                        return false;
+                      }
+                      
+                      // Skip anchors on same page
+                      if (linkUrl.href.split('#')[0] === pageUrl.split('#')[0]) {
+                        return false;
+                      }
+                      
+                      return true;
+                    } catch {
+                      return false;
+                    }
+                  });
+                  
+                  // Recursively crawl linked pages
+                  for (const link of linksToVisit) {
+                    await crawlUrl(link, depth + 1);
+                  }
+                  
+                } finally {
+                  await crawlPage.close();
+                }
+                
+              } catch (error: any) {
+                logToFile(`Error crawling ${pageUrl}: ${error.message}`);
+                sitemapData.set(pageUrl, {
+                  title: 'Error',
+                  links: [],
+                  status: 0,
+                  error: error.message
+                });
+                brokenLinks.add(pageUrl);
+              }
+            }
+            
+            // Start crawling
+            await crawlUrl(url, 0);
+            
+            // Generate output based on format
+            let output = '';
+            
+            if (outputFormat === 'json') {
+              const result = {
+                totalPages: sitemapData.size,
+                brokenLinks: Array.from(brokenLinks),
+                pages: Object.fromEntries(sitemapData)
+              };
+              output = JSON.stringify(result, null, 2);
+              
+            } else if (outputFormat === 'text') {
+              output = `SITEMAP REPORT\n`;
+              output += `==============\n\n`;
+              output += `Total Pages Crawled: ${sitemapData.size}\n`;
+              output += `Broken Links Found: ${brokenLinks.size}\n\n`;
+              
+              for (const [pageUrl, data] of sitemapData) {
+                output += `URL: ${pageUrl}\n`;
+                output += `Title: ${data.title}\n`;
+                output += `Status: ${data.status}\n`;
+                output += `Links: ${data.links.length}\n`;
+                if (data.error) {
+                  output += `Error: ${data.error}\n`;
+                }
+                if (includeText && data.text) {
+                  output += `Text Preview: ${data.text.substring(0, 200)}...\n`;
+                }
+                output += `\n`;
+              }
+              
+            } else { // markdown
+              output = `# Sitemap Report\n\n`;
+              output += `## Summary\n\n`;
+              output += `- **Total Pages Crawled**: ${sitemapData.size}\n`;
+              output += `- **Broken Links Found**: ${brokenLinks.size}\n`;
+              output += `- **Start URL**: ${url}\n`;
+              output += `- **Max Depth**: ${maxDepth}\n\n`;
+              
+              if (brokenLinks.size > 0) {
+                output += `## ⚠️ Broken Links\n\n`;
+                for (const brokenLink of brokenLinks) {
+                  output += `- ${brokenLink}\n`;
+                }
+                output += `\n`;
+              }
+              
+              output += `## Page Details\n\n`;
+              
+              // Sort pages by URL for consistent output
+              const sortedPages = Array.from(sitemapData.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+              
+              for (const [pageUrl, data] of sortedPages) {
+                output += `### ${data.title || 'Untitled Page'}\n\n`;
+                output += `- **URL**: ${pageUrl}\n`;
+                output += `- **Status**: ${data.status || 'Unknown'}\n`;
+                output += `- **Total Links**: ${data.links.length}\n`;
+                
+                if (data.error) {
+                  output += `- **Error**: ${data.error}\n`;
+                }
+                
+                if (data.links.length > 0) {
+                  output += `\n**Outgoing Links**:\n`;
+                  // Limit to first 10 links to avoid huge output
+                  const displayLinks = data.links.slice(0, 10);
+                  for (const link of displayLinks) {
+                    output += `  - ${link}\n`;
+                  }
+                  if (data.links.length > 10) {
+                    output += `  - ... and ${data.links.length - 10} more\n`;
+                  }
+                }
+                
+                if (includeText && data.text) {
+                  output += `\n**Page Content Preview**:\n\n`;
+                  output += `\`\`\`\n${data.text.substring(0, 500)}${data.text.length > 500 ? '...' : ''}\n\`\`\`\n`;
+                }
+                
+                output += `\n---\n\n`;
+              }
+            }
+            
+            return {
+              content: [{
+                type: 'text',
+                text: output
+              }]
+            };
+            
+          } catch (error: any) {
+            logToFile(`Error in sitemap_crawler: ${error}`);
+            throw new McpError(
+              ErrorCode.InternalError,
+              `Sitemap crawl failed: ${error.message}`
             );
           }
         }
