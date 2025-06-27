@@ -345,8 +345,8 @@ export class UserFlowDebugger {
         if (!step) continue; // Skip if step is undefined
         console.log(`  ${i + 1}. ${step.description}`);
         
-        // Simulate a delay for the step execution
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Configurable delay for step execution simulation (increased for better stability)
+        await new Promise(resolve => setTimeout(resolve, parseInt(process.env.VUDA_FLOW_STEP_DELAY || '1000')));
         
         // Randomly succeed or fail (80% success rate for demonstration)
         const stepSuccess = Math.random() < 0.8;
@@ -428,7 +428,7 @@ export class UserFlowDebugger {
     flow.steps.forEach(step => {
       // Add wait time for stability
       if (step.action === 'click' || step.action === 'fill') {
-        step.waitBefore = 1000; // Add wait before action
+        step.waitBefore = parseInt(process.env.VUDA_ACTION_WAIT_BEFORE || '2000'); // Configurable wait before action (increased for stability)
       }
       
       // Improve selectors with alternatives

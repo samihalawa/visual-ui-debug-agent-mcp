@@ -10,8 +10,24 @@ import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import { chromium, devices, request } from 'playwright';
 import Jimp from 'jimp';
-const TEMP_DIR = path.join(os.tmpdir(), 'ai-vision-debug');
+let TEMP_DIR = path.join(os.tmpdir(), 'ai-vision-debug');
 const DOWNLOADS_DIR = path.join(os.homedir(), 'Downloads');
+// Configurable timeout settings for better flexibility
+const TIMEOUT_CONFIG = {
+    // Default page and navigation timeouts (increased from 4000ms to 15000ms)
+    DEFAULT_TIMEOUT: parseInt(process.env.VUDA_DEFAULT_TIMEOUT || '15000'),
+    NAVIGATION_TIMEOUT: parseInt(process.env.VUDA_NAVIGATION_TIMEOUT || '15000'),
+    // Element waiting timeouts (increased from 4000ms to 12000ms)
+    SELECTOR_TIMEOUT: parseInt(process.env.VUDA_SELECTOR_TIMEOUT || '12000'),
+    // Fixed waits for stability (increased from 3000ms to 5000ms)
+    STABILITY_WAIT: parseInt(process.env.VUDA_STABILITY_WAIT || '5000'),
+    // Quick waits for UI updates (kept reasonable)
+    UI_UPDATE_WAIT: parseInt(process.env.VUDA_UI_UPDATE_WAIT || '1000'),
+    // Performance monitoring threshold (increased from 4000ms)
+    PERFORMANCE_THRESHOLD: parseInt(process.env.VUDA_PERFORMANCE_THRESHOLD || '15000'),
+    // Small delays for element interactions
+    INTERACTION_DELAY: parseInt(process.env.VUDA_INTERACTION_DELAY || '500'),
+};
 // Set up logging to a file instead of console
 const logDir = path.join(os.tmpdir(), 'ai-vision-debug-logs');
 try {
@@ -23,7 +39,16 @@ try {
     }
 }
 catch (error) {
-    // Silently fail if we can't create the directories
+    console.error(`Failed to create directory: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    // Use fallback temporary directory
+    const fallbackDir = path.join(os.tmpdir(), 'fallback-debug');
+    try {
+        fs.mkdirSync(fallbackDir, { recursive: true });
+        TEMP_DIR = fallbackDir;
+    }
+    catch (fallbackError) {
+        throw new Error(`Critical: Cannot create any temp directories: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`);
+    }
 }
 const logFile = path.join(logDir, 'ai-vision-debug.log');
 function logToFile(message) {
@@ -31,7 +56,7 @@ function logToFile(message) {
         fs.appendFileSync(logFile, `${new Date().toISOString()} - ${message}\n`);
     }
     catch (error) {
-        // Silently fail if we can't write to the log file
+        console.error(`Failed to write to log file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 // Simple UUID generator
@@ -48,7 +73,95 @@ const debugSession = {
     lastScreenshotPath: null,
     debugHistory: []
 };
-// Global browser and page state
+// Browser Manager for proper resource cleanup
+class BrowserManager {
+    constructor() {
+        this.browser = null;
+        this.contexts = new Set();
+        this.pages = new Set();
+        this.apiContext = null;
+    }
+    async getBrowser() {
+        if (!this.browser) {
+            const { chromium } = await import('playwright');
+            this.browser = await chromium.launch({ headless: true });
+        }
+        return this.browser;
+    }
+    async getContext() {
+        const browser = await this.getBrowser();
+        const context = await browser.newContext();
+        this.contexts.add(context);
+        return context;
+    }
+    async getPage() {
+        const context = await this.getContext();
+        const page = await context.newPage();
+        this.pages.add(page);
+        return page;
+    }
+    async cleanup() {
+        // Close all pages
+        for (const page of this.pages) {
+            try {
+                await page.close();
+            }
+            catch (error) {
+                console.error('Error closing page:', error);
+            }
+        }
+        this.pages.clear();
+        // Close all contexts
+        for (const context of this.contexts) {
+            try {
+                await context.close();
+            }
+            catch (error) {
+                console.error('Error closing context:', error);
+            }
+        }
+        this.contexts.clear();
+        // Close browser
+        if (this.browser) {
+            try {
+                await this.browser.close();
+            }
+            catch (error) {
+                console.error('Error closing browser:', error);
+            }
+            this.browser = null;
+        }
+        // Close API context
+        if (this.apiContext) {
+            try {
+                await this.apiContext.dispose();
+            }
+            catch (error) {
+                console.error('Error disposing API context:', error);
+            }
+            this.apiContext = null;
+        }
+    }
+}
+// Global browser manager instance
+const browserManager = new BrowserManager();
+// Add cleanup handlers
+process.on('SIGTERM', async () => {
+    console.log('Received SIGTERM, cleaning up...');
+    await browserManager.cleanup();
+    process.exit(0);
+});
+process.on('SIGINT', async () => {
+    console.log('Received SIGINT, cleaning up...');
+    await browserManager.cleanup();
+    process.exit(0);
+});
+process.on('uncaughtException', async (error) => {
+    console.error('Uncaught exception:', error);
+    await browserManager.cleanup();
+    process.exit(1);
+});
+// Legacy compatibility - these will be removed in tool implementations
 let browserInstance = null;
 let browserContext = null;
 let activePage = null;
@@ -112,7 +225,7 @@ const DomInspectorSchema = z.object({
 const ConsoleMonitorSchema = z.object({
     url: z.string().describe("URL to monitor console logs from"),
     filterTypes: z.array(z.enum(["log", "info", "warning", "error"])).optional().describe("Types of console messages to capture"),
-    duration: z.number().optional().describe("How long to monitor in milliseconds. Default: 4000"),
+    duration: z.number().optional().describe("How long to monitor in milliseconds. Default: 5000 (configurable via VUDA_STABILITY_WAIT)"),
     interactionSelector: z.string().optional().describe("Optional element to click before monitoring")
 });
 // Add schema for accessibility check
@@ -252,9 +365,9 @@ class AIVisionDebugServer {
                 await activePage.close().catch(() => { });
             }
             activePage = await browserContext.newPage();
-            // Set default timeout to 4 seconds for all operations
-            activePage.setDefaultTimeout(4000);
-            activePage.setDefaultNavigationTimeout(4000);
+            // Set default timeout using configurable values for better flexibility
+            activePage.setDefaultTimeout(TIMEOUT_CONFIG.DEFAULT_TIMEOUT);
+            activePage.setDefaultNavigationTimeout(TIMEOUT_CONFIG.NAVIGATION_TIMEOUT);
             // Set up console logging
             activePage.on('console', (message) => {
                 const logEntry = `[${message.type()}] ${message.text()}`;
@@ -294,16 +407,16 @@ class AIVisionDebugServer {
             logToFile(`Taking screenshot of URL: ${url}`);
             // Ensure browser is initialized with proper viewport
             const page = await this.ensureBrowser(1280, 800, deviceName);
-            // Navigate to the URL with timeout
+            // Navigate to the URL with configurable timeout
             await page.goto(url, {
                 waitUntil: 'domcontentloaded',
-                timeout: 4000
+                timeout: TIMEOUT_CONFIG.NAVIGATION_TIMEOUT
             });
             // Wait for specified time
-            await page.waitForTimeout(3000); // Fixed 3 second wait
+            await page.waitForTimeout(TIMEOUT_CONFIG.STABILITY_WAIT); // Configurable stability wait
             // Wait for selector if specified
             if (waitForSelector) {
-                await page.waitForSelector(waitForSelector, { timeout: 4000 });
+                await page.waitForSelector(waitForSelector, { timeout: TIMEOUT_CONFIG.SELECTOR_TIMEOUT });
             }
             // Generate a UUID for the file
             const fileUuid = randomUUID();
@@ -382,17 +495,17 @@ class AIVisionDebugServer {
             });
             // Measure page load time
             const startTime = Date.now();
-            // Navigate to the URL with timeout
+            // Navigate to the URL with configurable timeout
             await page.goto(url, {
                 waitUntil: 'domcontentloaded',
-                timeout: 4000
+                timeout: TIMEOUT_CONFIG.NAVIGATION_TIMEOUT
             });
             const loadTime = Date.now() - startTime;
             // Wait for specified time
-            await page.waitForTimeout(3000); // Fixed 3 second wait
+            await page.waitForTimeout(TIMEOUT_CONFIG.STABILITY_WAIT); // Configurable stability wait
             // Wait for selector if specified
             if (waitForSelector) {
-                await page.waitForSelector(waitForSelector, { timeout: 4000 });
+                await page.waitForSelector(waitForSelector, { timeout: TIMEOUT_CONFIG.SELECTOR_TIMEOUT });
             }
             // Get page title
             const title = await page.title();
@@ -794,7 +907,7 @@ class AIVisionDebugServer {
                 serverErrors: results.filter(r => r.status >= 500 && r.status < 600).length,
                 clientErrors: results.filter(r => r.status >= 400 && r.status < 500).length,
                 connectionErrors: results.filter(r => r.status === 0).length,
-                responseTimeouts: results.filter(r => r.responseTime > 4000).length,
+                responseTimeouts: results.filter(r => r.responseTime > TIMEOUT_CONFIG.PERFORMANCE_THRESHOLD).length,
             };
             logToFile(`API testing completed with ${successfulRequests}/${results.length} successful endpoints`);
             return {
@@ -881,7 +994,7 @@ class AIVisionDebugServer {
                             success = true;
                             break;
                         case 'wait':
-                            await page.waitForTimeout(3000); // Fixed 3 second wait
+                            await page.waitForTimeout(TIMEOUT_CONFIG.STABILITY_WAIT); // Configurable stability wait
                             success = true;
                             break;
                         case 'navigate':
@@ -889,7 +1002,7 @@ class AIVisionDebugServer {
                                 throw new Error('URL is required for navigate action');
                             await page.goto(currentStep.url, {
                                 waitUntil: 'domcontentloaded',
-                                timeout: 4000
+                                timeout: TIMEOUT_CONFIG.NAVIGATION_TIMEOUT
                             });
                             success = true;
                             break;
@@ -905,7 +1018,7 @@ class AIVisionDebugServer {
                             throw new Error(`Unknown action: ${currentStep.action}`);
                     }
                     // Wait for any potential navigation or Ajax calls
-                    await page.waitForTimeout(4000);
+                    await page.waitForTimeout(TIMEOUT_CONFIG.STABILITY_WAIT);
                     // Capture screenshot if requested
                     let screenshotPath, screenshotBase64;
                     if (captureScreenshots) {
@@ -999,7 +1112,7 @@ class AIVisionDebugServer {
                     const gridPage = await browserInstance.newPage();
                     try {
                         await gridPage.setContent(gridHtml);
-                        await gridPage.waitForTimeout(1000); // Wait for images to load
+                        await gridPage.waitForTimeout(TIMEOUT_CONFIG.UI_UPDATE_WAIT); // Wait for images to load
                         const gridScreenshot = await gridPage.screenshot({
                             fullPage: true,
                             type: 'png'
@@ -1087,13 +1200,13 @@ class AIVisionDebugServer {
             logToFile(`Inspecting DOM element: ${selector} at ${url}`);
             // Ensure browser is initialized
             const page = await this.ensureBrowser();
-            // Navigate to the URL with timeout
+            // Navigate to the URL with configurable timeout
             await page.goto(url, {
                 waitUntil: 'domcontentloaded',
-                timeout: 4000
+                timeout: TIMEOUT_CONFIG.NAVIGATION_TIMEOUT
             });
             // Wait for specified time
-            await page.waitForTimeout(3000); // Fixed 3 second wait
+            await page.waitForTimeout(TIMEOUT_CONFIG.STABILITY_WAIT); // Configurable stability wait
             // Check if element exists
             const elementHandle = await page.$(selector);
             if (!elementHandle) {
@@ -1198,7 +1311,7 @@ class AIVisionDebugServer {
     /**
      * Console Monitor tool
      */
-    async monitorConsole(url, filterTypes = ['log', 'info', 'warning', 'error'], duration = 4000, interactionSelector) {
+    async monitorConsole(url, filterTypes = ['log', 'info', 'warning', 'error'], duration = TIMEOUT_CONFIG.STABILITY_WAIT, interactionSelector) {
         try {
             logToFile(`Monitoring console at ${url}`);
             // Ensure browser is initialized
@@ -1219,10 +1332,10 @@ class AIVisionDebugServer {
                     });
                 }
             });
-            // Navigate to the URL with timeout
+            // Navigate to the URL with configurable timeout
             await page.goto(url, {
                 waitUntil: 'domcontentloaded',
-                timeout: 4000
+                timeout: TIMEOUT_CONFIG.NAVIGATION_TIMEOUT
             });
             // Perform interaction if requested
             if (interactionSelector) {
@@ -1367,7 +1480,7 @@ class AIVisionDebugServer {
             }
             // Generate recommendations
             const recommendations = [];
-            if (avgLoadTime > 4000) {
+            if (avgLoadTime > TIMEOUT_CONFIG.PERFORMANCE_THRESHOLD) {
                 recommendations.push('Page load time exceeds 3 seconds. Consider optimizing for faster loading.');
             }
             if (avgResourceCount > 50) {
@@ -1416,7 +1529,7 @@ class AIVisionDebugServer {
             const page = await this.ensureBrowser();
             // Take screenshot of first URL
             await page.goto(url1, { waitUntil: 'networkidle' });
-            await page.waitForTimeout(4000);
+            await page.waitForTimeout(TIMEOUT_CONFIG.STABILITY_WAIT);
             const fileUuid1 = randomUUID();
             const screenshotPath1 = path.join(TEMP_DIR, `compare1_${fileUuid1}.png`);
             if (selector) {
@@ -1434,7 +1547,7 @@ class AIVisionDebugServer {
             }
             // Take screenshot of second URL
             await page.goto(url2, { waitUntil: 'networkidle' });
-            await page.waitForTimeout(4000);
+            await page.waitForTimeout(TIMEOUT_CONFIG.STABILITY_WAIT);
             const fileUuid2 = randomUUID();
             const screenshotPath2 = path.join(TEMP_DIR, `compare2_${fileUuid2}.png`);
             if (selector) {
@@ -1891,7 +2004,7 @@ class AIVisionDebugServer {
                             },
                             duration: {
                                 type: 'number',
-                                description: 'How long to monitor in milliseconds. Default: 4000'
+                                description: 'How long to monitor in milliseconds. Default: 5000 (configurable via VUDA_STABILITY_WAIT)'
                             },
                             interactionSelector: {
                                 type: 'string',
@@ -1983,7 +2096,7 @@ class AIVisionDebugServer {
                             },
                             waitTime: {
                                 type: 'number',
-                                description: 'Time to wait in milliseconds before taking each screenshot. Default: 4000'
+                                description: 'Time to wait in milliseconds before taking each screenshot. Default: 5000 (configurable via VUDA_STABILITY_WAIT)'
                             },
                             gridSize: {
                                 type: 'number',
@@ -2968,12 +3081,12 @@ class AIVisionDebugServer {
                             throw new McpError(ErrorCode.InvalidParams, `Invalid URL format: ${errorMessage}`);
                         }
                         // Monitor console
-                        const result = await this.monitorConsole(args.url, args.filterTypes || ['log', 'info', 'warning', 'error'], args.duration || 4000, args.interactionSelector);
+                        const result = await this.monitorConsole(args.url, args.filterTypes || ['log', 'info', 'warning', 'error'], args.duration || TIMEOUT_CONFIG.STABILITY_WAIT, args.interactionSelector);
                         // Create content array
                         const content = [
                             {
                                 type: "text",
-                                text: `# Console Monitoring: ${args.url}\n\nMonitored for ${args.duration || 4000}ms\nCaptured ${result.messages.length} console messages\n`
+                                text: `# Console Monitoring: ${args.url}\n\nMonitored for ${args.duration || TIMEOUT_CONFIG.STABILITY_WAIT}ms\nCaptured ${result.messages.length} console messages\n`
                             }
                         ];
                         // Add screenshot
@@ -3207,7 +3320,7 @@ class AIVisionDebugServer {
                         const page = await this.ensureBrowser();
                         await page.goto(args.url, {
                             waitUntil: args.waitUntil || 'networkidle',
-                            timeout: args.timeout || 4000 // Default 4s timeout
+                            timeout: args.timeout || TIMEOUT_CONFIG.NAVIGATION_TIMEOUT // Configurable default timeout
                         });
                         debugSession.currentUrl = page.url(); // Update current URL
                         return { content: [{ type: 'text', text: `Navigated to ${page.url()}` }] };
@@ -3224,7 +3337,7 @@ class AIVisionDebugServer {
                             throw new McpError(ErrorCode.InvalidParams, 'Selector is required');
                         const page = ensureActivePage();
                         await page.click(args.selector);
-                        await page.waitForTimeout(500); // Small delay for potential UI updates
+                        await page.waitForTimeout(TIMEOUT_CONFIG.INTERACTION_DELAY); // Configurable delay for UI updates
                         return { content: [{ type: 'text', text: `Clicked element: ${args.selector}` }] };
                     }
                     catch (error) {
@@ -3242,7 +3355,7 @@ class AIVisionDebugServer {
                         if (!frame)
                             throw new Error(`Iframe not found: ${args.iframeSelector}`);
                         await frame.locator(args.selector).click();
-                        await page.waitForTimeout(500);
+                        await page.waitForTimeout(TIMEOUT_CONFIG.INTERACTION_DELAY);
                         return { content: [{ type: 'text', text: `Clicked element: ${args.selector} in iframe: ${args.iframeSelector}` }] };
                     }
                     catch (error) {
@@ -3257,7 +3370,7 @@ class AIVisionDebugServer {
                             throw new McpError(ErrorCode.InvalidParams, 'Selector and value are required');
                         const page = ensureActivePage();
                         await page.fill(args.selector, args.value);
-                        await page.waitForTimeout(200);
+                        await page.waitForTimeout(TIMEOUT_CONFIG.INTERACTION_DELAY);
                         return { content: [{ type: 'text', text: `Filled element ${args.selector}` }] };
                     }
                     catch (error) {
@@ -3272,7 +3385,7 @@ class AIVisionDebugServer {
                             throw new McpError(ErrorCode.InvalidParams, 'Selector and value are required');
                         const page = ensureActivePage();
                         await page.selectOption(args.selector, args.value);
-                        await page.waitForTimeout(200);
+                        await page.waitForTimeout(TIMEOUT_CONFIG.INTERACTION_DELAY);
                         return { content: [{ type: 'text', text: `Selected option in ${args.selector}` }] };
                     }
                     catch (error) {
@@ -3287,7 +3400,7 @@ class AIVisionDebugServer {
                             throw new McpError(ErrorCode.InvalidParams, 'Selector is required');
                         const page = ensureActivePage();
                         await page.hover(args.selector);
-                        await page.waitForTimeout(200);
+                        await page.waitForTimeout(TIMEOUT_CONFIG.INTERACTION_DELAY);
                         return { content: [{ type: 'text', text: `Hovered over element: ${args.selector}` }] };
                     }
                     catch (error) {
@@ -3398,7 +3511,7 @@ class AIVisionDebugServer {
                         else {
                             await page.keyboard.press(args.key);
                         }
-                        await page.waitForTimeout(200);
+                        await page.waitForTimeout(TIMEOUT_CONFIG.INTERACTION_DELAY);
                         return { content: [{ type: 'text', text: `Pressed key: ${args.key}` + (args.selector ? ` on ${args.selector}` : '') }] };
                     }
                     catch (error) {
@@ -3413,7 +3526,7 @@ class AIVisionDebugServer {
                             throw new McpError(ErrorCode.InvalidParams, 'Source and target selectors are required');
                         const page = ensureActivePage();
                         await page.dragAndDrop(args.sourceSelector, args.targetSelector);
-                        await page.waitForTimeout(500);
+                        await page.waitForTimeout(TIMEOUT_CONFIG.INTERACTION_DELAY);
                         return { content: [{ type: 'text', text: `Dragged ${args.sourceSelector} to ${args.targetSelector}` }] };
                     }
                     catch (error) {
@@ -3886,17 +3999,17 @@ lt --port ${localPort}
                                 // Create new page for each crawl to avoid conflicts
                                 const crawlPage = await browserInstance.newPage();
                                 try {
-                                    // Navigate with shorter timeout
+                                    // Navigate with configurable timeout
                                     const response = await crawlPage.goto(pageUrl, {
                                         waitUntil: 'domcontentloaded',
-                                        timeout: 4000
+                                        timeout: TIMEOUT_CONFIG.NAVIGATION_TIMEOUT
                                     });
                                     const status = response?.status() || 0;
                                     if (status >= 400) {
                                         brokenLinks.add(pageUrl);
                                     }
                                     // Wait a bit for dynamic content
-                                    await crawlPage.waitForTimeout(1000);
+                                    await crawlPage.waitForTimeout(TIMEOUT_CONFIG.UI_UPDATE_WAIT);
                                     // Get page title
                                     const title = await crawlPage.title();
                                     // Get all links
@@ -4136,7 +4249,7 @@ lt --port ${localPort}
                             stepDetails = `Hovered ${step.selector}`;
                             break;
                         case 'wait':
-                            await page.waitForTimeout(3000); // Fixed 3 second wait
+                            await page.waitForTimeout(TIMEOUT_CONFIG.STABILITY_WAIT); // Configurable stability wait
                             stepDetails = `Waited 3000ms`;
                             break;
                         case 'evaluate':
@@ -4164,13 +4277,13 @@ lt --port ${localPort}
                         case 'verifyElementVisible':
                             if (!step.selector)
                                 throw new Error('Selector is required for verifyElementVisible');
-                            await page.waitForSelector(step.selector, { state: 'visible', timeout: 4000 });
+                            await page.waitForSelector(step.selector, { state: 'visible', timeout: TIMEOUT_CONFIG.SELECTOR_TIMEOUT });
                             stepDetails = `Verified element visible: ${step.selector}`;
                             break;
                         case 'verifyElementNotVisible':
                             if (!step.selector)
                                 throw new Error('Selector is required for verifyElementNotVisible');
-                            await page.waitForSelector(step.selector, { state: 'hidden', timeout: 4000 });
+                            await page.waitForSelector(step.selector, { state: 'hidden', timeout: TIMEOUT_CONFIG.SELECTOR_TIMEOUT });
                             stepDetails = `Verified element not visible: ${step.selector}`;
                             break;
                         case 'verifyUrl':
@@ -4185,7 +4298,7 @@ lt --port ${localPort}
                         default:
                             throw new Error(`Unsupported action: ${step.action}`);
                     }
-                    await page.waitForTimeout(500); // Small delay after action
+                    await page.waitForTimeout(TIMEOUT_CONFIG.INTERACTION_DELAY); // Configurable delay after action
                 }
                 catch (error) {
                     stepStatus = "Failure";
