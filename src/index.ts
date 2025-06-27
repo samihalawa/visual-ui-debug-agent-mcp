@@ -33,7 +33,15 @@ try {
     fs.mkdirSync(TEMP_DIR, { recursive: true });
   }
 } catch (error) {
-  // Silently fail if we can't create the directories
+  console.error(`Failed to create directory: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  // Use fallback temporary directory
+  const fallbackDir = path.join(os.tmpdir(), 'fallback-debug');
+  try {
+    fs.mkdirSync(fallbackDir, { recursive: true });
+    TEMP_DIR = fallbackDir;
+  } catch (fallbackError) {
+    throw new Error(`Critical: Cannot create any temp directories: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`);
+  }
 }
 
 const logFile = path.join(logDir, 'ai-vision-debug.log');
@@ -42,7 +50,7 @@ function logToFile(message: string): void {
   try {
     fs.appendFileSync(logFile, `${new Date().toISOString()} - ${message}\n`);
   } catch (error) {
-    // Silently fail if we can't write to the log file
+    console.error(`Failed to write to log file: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -69,7 +77,101 @@ const debugSession: DebugSession = {
   debugHistory: []
 };
 
-// Global browser and page state
+// Browser Manager for proper resource cleanup
+class BrowserManager {
+  private browser: import('playwright').Browser | null = null;
+  private contexts: Set<import('playwright').BrowserContext> = new Set();
+  private pages: Set<import('playwright').Page> = new Set();
+  private apiContext: import('playwright').APIRequestContext | null = null;
+
+  async getBrowser(): Promise<import('playwright').Browser> {
+    if (!this.browser) {
+      const { chromium } = await import('playwright');
+      this.browser = await chromium.launch({ headless: true });
+    }
+    return this.browser;
+  }
+
+  async getContext(): Promise<import('playwright').BrowserContext> {
+    const browser = await this.getBrowser();
+    const context = await browser.newContext();
+    this.contexts.add(context);
+    return context;
+  }
+
+  async getPage(): Promise<import('playwright').Page> {
+    const context = await this.getContext();
+    const page = await context.newPage();
+    this.pages.add(page);
+    return page;
+  }
+
+  async cleanup(): Promise<void> {
+    // Close all pages
+    for (const page of this.pages) {
+      try {
+        await page.close();
+      } catch (error) {
+        console.error('Error closing page:', error);
+      }
+    }
+    this.pages.clear();
+
+    // Close all contexts
+    for (const context of this.contexts) {
+      try {
+        await context.close();
+      } catch (error) {
+        console.error('Error closing context:', error);
+      }
+    }
+    this.contexts.clear();
+
+    // Close browser
+    if (this.browser) {
+      try {
+        await this.browser.close();
+      } catch (error) {
+        console.error('Error closing browser:', error);
+      }
+      this.browser = null;
+    }
+
+    // Close API context
+    if (this.apiContext) {
+      try {
+        await this.apiContext.dispose();
+      } catch (error) {
+        console.error('Error disposing API context:', error);
+      }
+      this.apiContext = null;
+    }
+  }
+}
+
+// Global browser manager instance
+const browserManager = new BrowserManager();
+
+// Add cleanup handlers
+process.on('SIGTERM', async () => {
+  console.log('Received SIGTERM, cleaning up...');
+  await browserManager.cleanup();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('Received SIGINT, cleaning up...');
+  await browserManager.cleanup();
+  process.exit(0);
+});
+
+process.on('uncaughtException', async (error) => {
+  console.error('Uncaught exception:', error);
+  await browserManager.cleanup();
+  process.exit(1);
+});
+
+// Legacy compatibility - these will be removed in tool implementations
 let browserInstance: import('playwright').Browser | null = null;
 let browserContext: import('playwright').BrowserContext | null = null;
 let activePage: import('playwright').Page | null = null;
