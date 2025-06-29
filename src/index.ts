@@ -231,6 +231,128 @@ interface InteractiveElement {
   type: string;
 }
 
+// Image splitting utility for handling oversized screenshots
+interface ImageSplitResult {
+  chunks: Array<{
+    base64Data: string;
+    chunkIndex: number;
+    totalChunks: number;
+    originalWidth: number;
+    originalHeight: number;
+    chunkWidth: number;
+    chunkHeight: number;
+    offsetX: number;
+    offsetY: number;
+  }>;
+  originalDimensions: {
+    width: number;
+    height: number;
+  };
+  wasSplit: boolean;
+}
+
+/**
+ * Utility function to split large images into smaller chunks to avoid API size limits
+ * @param base64Data - Base64 encoded image data
+ * @param maxDimension - Maximum allowed dimension (default: 7500 to stay under 8000 limit)
+ * @returns ImageSplitResult containing chunks or original image if no splitting needed
+ */
+async function splitLargeImage(base64Data: string, maxDimension: number = 7500): Promise<ImageSplitResult> {
+  try {
+    // Convert base64 to buffer
+    const imageBuffer = Buffer.from(base64Data, 'base64');
+    
+    // Load image with Jimp
+    const image = await Jimp.read(imageBuffer);
+    const originalWidth = image.getWidth();
+    const originalHeight = image.getHeight();
+    
+    // Check if image needs splitting
+    if (originalWidth <= maxDimension && originalHeight <= maxDimension) {
+      return {
+        chunks: [{
+          base64Data,
+          chunkIndex: 0,
+          totalChunks: 1,
+          originalWidth,
+          originalHeight,
+          chunkWidth: originalWidth,
+          chunkHeight: originalHeight,
+          offsetX: 0,
+          offsetY: 0
+        }],
+        originalDimensions: { width: originalWidth, height: originalHeight },
+        wasSplit: false
+      };
+    }
+    
+    // Calculate how many chunks we need
+    const chunksX = Math.ceil(originalWidth / maxDimension);
+    const chunksY = Math.ceil(originalHeight / maxDimension);
+    const totalChunks = chunksX * chunksY;
+    
+    logToFile(`Splitting large image (${originalWidth}x${originalHeight}) into ${totalChunks} chunks (${chunksX}x${chunksY})`);
+    
+    const chunks: ImageSplitResult['chunks'] = [];
+    let chunkIndex = 0;
+    
+    for (let y = 0; y < chunksY; y++) {
+      for (let x = 0; x < chunksX; x++) {
+        const offsetX = x * maxDimension;
+        const offsetY = y * maxDimension;
+        const chunkWidth = Math.min(maxDimension, originalWidth - offsetX);
+        const chunkHeight = Math.min(maxDimension, originalHeight - offsetY);
+        
+        // Create chunk by cropping the original image
+        const chunk = image.clone().crop(offsetX, offsetY, chunkWidth, chunkHeight);
+        
+        // Convert chunk to base64
+        const chunkBuffer = await chunk.getBufferAsync(Jimp.MIME_PNG);
+        const chunkBase64 = chunkBuffer.toString('base64');
+        
+        chunks.push({
+          base64Data: chunkBase64,
+          chunkIndex,
+          totalChunks,
+          originalWidth,
+          originalHeight,
+          chunkWidth,
+          chunkHeight,
+          offsetX,
+          offsetY
+        });
+        
+        chunkIndex++;
+      }
+    }
+    
+    return {
+      chunks,
+      originalDimensions: { width: originalWidth, height: originalHeight },
+      wasSplit: true
+    };
+    
+  } catch (error: any) {
+    logToFile(`Error splitting image: ${error.message}`);
+    // If splitting fails, return original image as single chunk
+    return {
+      chunks: [{
+        base64Data,
+        chunkIndex: 0,
+        totalChunks: 1,
+        originalWidth: 0,
+        originalHeight: 0,
+        chunkWidth: 0,
+        chunkHeight: 0,
+        offsetX: 0,
+        offsetY: 0
+      }],
+      originalDimensions: { width: 0, height: 0 },
+      wasSplit: false
+    };
+  }
+}
+
 // Add schema for enhanced page analyzer
 const EnhancedPageAnalyzerSchema = z.object({
   url: z.string().describe("URL to analyze (e.g., http://localhost:4999, https://example.com)"),
@@ -500,7 +622,7 @@ class AIVisionDebugServer {
     selector?: string,
     waitForSelector?: string,
     deviceName?: string
-  ): Promise<{ path: string, fileUuid: string, base64Data: string }> {
+  ): Promise<{ path: string, fileUuid: string, base64Data: string, splitResult?: ImageSplitResult }> {
     try {
       logToFile(`Taking screenshot of URL: ${url}`);
       
@@ -543,18 +665,21 @@ class AIVisionDebugServer {
       const buffer = await fsPromises.readFile(screenshotPath);
       const base64Data = buffer.toString('base64');
       
+      // Check if image needs splitting and split if necessary
+      const splitResult = await splitLargeImage(base64Data);
+      
       // Update the debug session
       debugSession.currentUrl = url;
       debugSession.lastScreenshotPath = screenshotPath;
-      debugSession.debugHistory.push(`Screenshot taken of ${url}`);
+      debugSession.debugHistory.push(`Screenshot taken of ${url}${splitResult.wasSplit ? ` (split into ${splitResult.chunks.length} chunks)` : ''}`);
       
       // Add to screenshots collection for resource access
       const screenshotName = `Screenshot_${new Date().toISOString().replace(/[:.]/g, '-')}`;
       screenshots.set(screenshotName, base64Data);
       
-      logToFile(`Screenshot saved to ${screenshotPath}`);
+      logToFile(`Screenshot saved to ${screenshotPath}${splitResult.wasSplit ? ` and split into ${splitResult.chunks.length} chunks` : ''}`);
       
-      return { path: screenshotPath, fileUuid, base64Data };
+      return { path: screenshotPath, fileUuid, base64Data, splitResult };
     } catch (error: any) {
       logToFile(`Error taking screenshot: ${error}`);
       throw new Error(`Failed to take screenshot of URL ${url}: ${error.message}`);
@@ -572,7 +697,7 @@ class AIVisionDebugServer {
     waitForSelector?: string,
     deviceName?: string
   ): Promise<{
-    screenshot: { path: string, base64Data: string },
+    screenshot: { path: string, base64Data: string, splitResult?: ImageSplitResult },
     annotatedScreenshot?: { path: string, base64Data: string },
     consoleMessages?: ConsoleMessage[],
     interactiveElements?: InteractiveElement[],
@@ -660,6 +785,9 @@ class AIVisionDebugServer {
       // Get the base64 data of the screenshot
       const buffer = await fsPromises.readFile(screenshotPath);
       const base64Data = buffer.toString('base64');
+      
+      // Check if image needs splitting and split if necessary
+      const splitResult = await splitLargeImage(base64Data);
       
       // Collect performance metrics
       const performanceMetrics = await page.evaluate(() => {
@@ -974,7 +1102,7 @@ class AIVisionDebugServer {
       
       // Return the results
       return {
-        screenshot: { path: screenshotPath, base64Data },
+        screenshot: { path: screenshotPath, base64Data, splitResult },
         annotatedScreenshot,
         consoleMessages: includeConsole ? consoleMessages : undefined,
         interactiveElements: mapElements ? interactiveElements : undefined,
@@ -1359,14 +1487,14 @@ class AIVisionDebugServer {
     gridSize: number = 2,
     deviceName?: string
   ): Promise<{
-    screenshots: Array<{ url: string, path: string, base64Data: string, error?: string }>,
+    screenshots: Array<{ url: string, path: string, base64Data: string, error?: string, splitResult?: ImageSplitResult }>,
     gridImagePath?: string,
     gridImageBase64?: string
   }> {
     try {
       logToFile(`Taking batch screenshots of ${urls.length} URLs`);
       
-      const screenshots: Array<{ url: string, path: string, base64Data: string, error?: string }> = [];
+      const screenshots: Array<{ url: string, path: string, base64Data: string, error?: string, splitResult?: ImageSplitResult }> = [];
       
       // Take individual screenshots
       for (const url of urls) {
@@ -1375,7 +1503,8 @@ class AIVisionDebugServer {
           screenshots.push({
             url,
             path: screenshot.path,
-            base64Data: screenshot.base64Data
+            base64Data: screenshot.base64Data,
+            splitResult: screenshot.splitResult
           });
         } catch (error: any) {
           logToFile(`Error taking screenshot of ${url}: ${error.message}`);
@@ -2983,11 +3112,33 @@ class AIVisionDebugServer {
               text: "## Screenshot"
             });
             
-            content.push({
-              type: "image",
-              data: result.screenshot.base64Data,
-              mimeType: "image/png"
-            });
+            // Handle split images
+            if (result.screenshot.splitResult && result.screenshot.splitResult.wasSplit) {
+              content.push({
+                type: "text",
+                text: `⚠️ Large image detected (${result.screenshot.splitResult.originalDimensions.width}x${result.screenshot.splitResult.originalDimensions.height}px) - Split into ${result.screenshot.splitResult.chunks.length} chunks:`
+              });
+              
+              // Add each chunk as a separate image
+              result.screenshot.splitResult.chunks.forEach((chunk) => {
+                content.push({
+                  type: "text",
+                  text: `**Chunk ${chunk.chunkIndex + 1}/${chunk.totalChunks}** (${chunk.chunkWidth}x${chunk.chunkHeight}px at offset ${chunk.offsetX},${chunk.offsetY})`
+                });
+                content.push({
+                  type: "image",
+                  data: chunk.base64Data,
+                  mimeType: "image/png"
+                });
+              });
+            } else {
+              // Single image - no splitting needed
+              content.push({
+                type: "image",
+                data: result.screenshot.base64Data,
+                mimeType: "image/png"
+              });
+            }
             
             // Add annotated screenshot if available
             if (result.annotatedScreenshot) {
@@ -3527,23 +3678,47 @@ class AIVisionDebugServer {
               args.device
             );
             
-            return {
-              content: [
-                {
+            const content: any[] = [
+              {
+                type: "text",
+                text: `Screenshot captured from URL: ${args.url}${args.selector ? ` (selector: ${args.selector})` : ''}`
+              }
+            ];
+            
+            // Handle split images
+            if (screenshot.splitResult && screenshot.splitResult.wasSplit) {
+              content.push({
+                type: "text",
+                text: `⚠️ Large image detected (${screenshot.splitResult.originalDimensions.width}x${screenshot.splitResult.originalDimensions.height}px) - Split into ${screenshot.splitResult.chunks.length} chunks to avoid API limits:`
+              });
+              
+              // Add each chunk as a separate image
+              screenshot.splitResult.chunks.forEach((chunk, index) => {
+                content.push({
                   type: "text",
-                  text: `Screenshot captured from URL: ${args.url}${args.selector ? ` (selector: ${args.selector})` : ''}`
-                },
-                {
+                  text: `**Chunk ${chunk.chunkIndex + 1}/${chunk.totalChunks}** (${chunk.chunkWidth}x${chunk.chunkHeight}px at offset ${chunk.offsetX},${chunk.offsetY})`
+                });
+                content.push({
                   type: "image",
-                  data: screenshot.base64Data,
+                  data: chunk.base64Data,
                   mimeType: "image/png"
-                },
-                {
-                  type: "text",
-                  text: `Screenshot saved at: ${screenshot.path}`
-                }
-              ]
-            };
+                });
+              });
+            } else {
+              // Single image - no splitting needed
+              content.push({
+                type: "image",
+                data: screenshot.base64Data,
+                mimeType: "image/png"
+              });
+            }
+            
+            content.push({
+              type: "text",
+              text: `Screenshot saved at: ${screenshot.path}`
+            });
+            
+            return { content };
           } catch (error: any) {
             throw new McpError(
               ErrorCode.InternalError,
@@ -3606,15 +3781,36 @@ class AIVisionDebugServer {
                   text: `❌ **${screenshot.url}**: ${screenshot.error}`
                 });
               } else {
-                content.push({
-                  type: "text",
-                  text: `✅ **${screenshot.url}**`
-                });
-                content.push({
-                  type: "image", 
-                  data: screenshot.base64Data,
-                  mimeType: "image/png"
-                });
+                // Handle split images for each screenshot
+                if (screenshot.splitResult && screenshot.splitResult.wasSplit) {
+                  content.push({
+                    type: "text",
+                    text: `✅ **${screenshot.url}** (${screenshot.splitResult.originalDimensions.width}x${screenshot.splitResult.originalDimensions.height}px - Split into ${screenshot.splitResult.chunks.length} chunks)`
+                  });
+                  
+                  // Add each chunk as a separate image
+                  screenshot.splitResult.chunks.forEach((chunk) => {
+                    content.push({
+                      type: "text",
+                      text: `  📷 Chunk ${chunk.chunkIndex + 1}/${chunk.totalChunks} (${chunk.chunkWidth}x${chunk.chunkHeight}px)`
+                    });
+                    content.push({
+                      type: "image", 
+                      data: chunk.base64Data,
+                      mimeType: "image/png"
+                    });
+                  });
+                } else {
+                  content.push({
+                    type: "text",
+                    text: `✅ **${screenshot.url}**`
+                  });
+                  content.push({
+                    type: "image", 
+                    data: screenshot.base64Data,
+                    mimeType: "image/png"
+                  });
+                }
               }
             }
             
@@ -4394,26 +4590,52 @@ class AIVisionDebugServer {
                 // If screenshot returns buffer directly (Playwright >= 1.15), use it, else read file
                 const base64Data = screenshotData ? screenshotData.toString('base64') : (await fsPromises.readFile(screenshotPath)).toString('base64');
                 
+                // Check if image needs splitting and split if necessary
+                const splitResult = await splitLargeImage(base64Data);
+                
                 // Add to screenshots collection for resource access
                 screenshots.set(screenshotName, base64Data);
-                logToFile(`Screenshot '${screenshotName}' saved to ${screenshotPath}`);
+                logToFile(`Screenshot '${screenshotName}' saved to ${screenshotPath}${splitResult.wasSplit ? ` and split into ${splitResult.chunks.length} chunks` : ''}`);
 
                 // Clean up the temporary file
                 await fsPromises.unlink(screenshotPath).catch(err => logToFile(`Failed to delete temp screenshot file ${screenshotPath}: ${err}`));
 
-                return {
-                    content: [
-                        {
+                const content: any[] = [
+                    {
+                        type: "text",
+                        text: `Screenshot '${screenshotName}' captured. Resource URI: screenshot://${screenshotName}`
+                    }
+                ];
+
+                // Handle split images
+                if (splitResult.wasSplit) {
+                    content.push({
+                        type: "text",
+                        text: `⚠️ Large image detected (${splitResult.originalDimensions.width}x${splitResult.originalDimensions.height}px) - Split into ${splitResult.chunks.length} chunks:`
+                    });
+                    
+                    // Add each chunk as a separate image
+                    splitResult.chunks.forEach((chunk) => {
+                        content.push({
                             type: "text",
-                            text: `Screenshot '${screenshotName}' captured. Resource URI: screenshot://${screenshotName}`
-                        },
-                        {
+                            text: `**Chunk ${chunk.chunkIndex + 1}/${chunk.totalChunks}** (${chunk.chunkWidth}x${chunk.chunkHeight}px at offset ${chunk.offsetX},${chunk.offsetY})`
+                        });
+                        content.push({
                             type: "image",
-                            data: base64Data,
+                            data: chunk.base64Data,
                             mimeType: "image/png"
-                        }
-                    ]
-                };
+                        });
+                    });
+                } else {
+                    // Single image - no splitting needed
+                    content.push({
+                        type: "image",
+                        data: base64Data,
+                        mimeType: "image/png"
+                    });
+                }
+
+                return { content };
             } catch (error: any) {
                 logToFile(`Playwright screenshot error: ${error}`);
                 throw new McpError(ErrorCode.InternalError, `Failed to take screenshot: ${error.message}`);
