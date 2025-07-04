@@ -2,16 +2,16 @@
   "name": "visual-ui-debug-agent-mcp",
   "version": "1.0.1",
   "description": "VUDA: Visual UI Debug Agent - An autonomous MCP for visual testing and debugging of user interfaces",
-  "main": "build/index.js",
+  "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "vuda": "build/index.js",
-    "visual-ui-debug-agent": "build/index.js",
+    "vuda": "dist/index.js",
+    "visual-ui-debug-agent": "dist/index.js",
     "vuda-smithery": "scripts/start-smithery.js"
   },
   "scripts": {
-    "build": "tsc && shx chmod +x build/index.js",
-    "start": "node build/index.js",
+    "build": "tsc && shx chmod +x dist/index.js",
+    "start": "node dist/index.js",
     "prepare": "npm run build",
     "dev": "npm run build && npm start",
     "init-repo": "node scripts/init-repo.js",
@@ -46,7 +46,7 @@
   },
   "devDependencies": {
     "@types/jimp": "^0.2.28",
-    "@types/node": "^18.0.0",
+    "@types/node": "^20.11.24",
     "@types/node-fetch": "^2.6.4",
     "concurrently": "9.1.2",
     "shx": "^0.3.4",
