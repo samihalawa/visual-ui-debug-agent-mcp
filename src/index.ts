@@ -794,17 +794,17 @@ class AIVisionDebugServer {
         const performance = window.performance;
         if (!performance) return null;
         
-        const timing = performance.timing || {};
+        const timing = (performance as any).timing || {} as any;
         const memory = (performance as any).memory || {};
-        const navigation = performance.navigation || {};
-        
+        const navigation = (performance as any).navigation || {} as any;
+
         // Get important timing measures
-        const pageLoadTime = timing.loadEventEnd - timing.navigationStart;
-        const dnsLookupTime = timing.domainLookupEnd - timing.domainLookupStart;
-        const tcpConnectionTime = timing.connectEnd - timing.connectStart;
-        const serverResponseTime = timing.responseEnd - timing.requestStart;
-        const domInteractive = timing.domInteractive - timing.navigationStart;
-        const domContentLoaded = timing.domContentLoadedEventEnd - timing.navigationStart;
+        const pageLoadTime = (timing.loadEventEnd || 0) - (timing.navigationStart || 0);
+        const dnsLookupTime = (timing.domainLookupEnd || 0) - (timing.domainLookupStart || 0);
+        const tcpConnectionTime = (timing.connectEnd || 0) - (timing.connectStart || 0);
+        const serverResponseTime = (timing.responseEnd || 0) - (timing.requestStart || 0);
+        const domInteractive = (timing.domInteractive || 0) - (timing.navigationStart || 0);
+        const domContentLoaded = (timing.domContentLoadedEventEnd || 0) - (timing.navigationStart || 0);
         
         // Get resource performance entries if available
         let resources: Array<Record<string, any>> = [];
@@ -2004,7 +2004,7 @@ class AIVisionDebugServer {
       
       for (const result of iterationResults) {
         for (const [type, count] of Object.entries(result.resourcesByType || {})) {
-          combinedResourcesByType[type] = (combinedResourcesByType[type] || 0) + count;
+          combinedResourcesByType[type] = (combinedResourcesByType[type] || 0) + (typeof count === 'number' ? count : 0);
         }
         combinedSize += result.totalSize || 0;
       }
