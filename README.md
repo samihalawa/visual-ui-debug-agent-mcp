@@ -38,12 +38,42 @@
 ## See It In Action
 
 <p align="center">
-  <img src="publicresources/tool-call-mockup.svg" alt="Claude Desktop calling VUDA MCP tools" width="100%">
+  <img src="publicresources/link-checker-demo.jpeg" alt="VUDA Link Checker in Claude Desktop" width="100%">
 </p>
 
 <p align="center">
-  <i>Claude Desktop using VUDA to automatically crawl a site, find broken links, and capture screenshots</i>
+  <i>Claude Desktop using VUDA to check links and find broken pages</i>
 </p>
+
+<p align="center">
+  <img src="publicresources/workflow-validation-demo.jpeg" alt="VUDA Workflow Validation" width="100%">
+</p>
+
+<p align="center">
+  <i>Validating user registration flow with step-by-step screenshots</i>
+</p>
+
+<p align="center">
+  <img src="publicresources/screenshot-demo.jpeg" alt="VUDA Screenshot Tool" width="100%">
+</p>
+
+<p align="center">
+  <i>Taking screenshots via Puppeteer MCP integration</i>
+</p>
+
+---
+
+## Architecture
+
+<p align="center">
+  <img src="publicresources/architecture-diagram.jpeg" alt="VUDA Architecture" width="100%">
+</p>
+
+<p align="center">
+  <img src="publicresources/mcp-flow-diagram.jpeg" alt="MCP Tool Request Flow" width="100%">
+</p>
+
+VUDA acts as a bridge between AI models and web browsers through the MCP protocol. It uses Playwright for reliable cross-browser automation and provides structured data that any AI can understand.
 
 ---
 
@@ -96,16 +126,6 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
   }
 }
 ```
-
----
-
-## Architecture
-
-<p align="center">
-  <img src="publicresources/architecture.svg" alt="VUDA Architecture" width="100%">
-</p>
-
-VUDA acts as a bridge between AI models and web browsers through the MCP protocol. It uses Playwright for reliable cross-browser automation and provides structured data that any AI can understand.
 
 ---
 
