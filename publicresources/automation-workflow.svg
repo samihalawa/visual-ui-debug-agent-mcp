@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" width="900" height="500">
+  <defs>
+    <linearGradient id="bgGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1117"/>
+      <stop offset="100%" style="stop-color:#161b22"/>
+    </linearGradient>
+    <linearGradient id="flowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#58a6ff"/>
+      <stop offset="50%" style="stop-color:#a371f7"/>
+      <stop offset="100%" style="stop-color:#3fb950"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#58a6ff"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#3fb950"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="500" fill="url(#bgGrad2)"/>
+
+  <!-- Title -->
+  <text x="450" y="35" font-family="system-ui" font-size="18" fill="url(#flowGrad)" text-anchor="middle" font-weight="700">Automated UI Testing Workflow</text>
+  <text x="450" y="55" font-family="system-ui" font-size="12" fill="#8b949e" text-anchor="middle">One command triggers comprehensive site analysis</text>
+
+  <!-- Step 1: Input -->
+  <g transform="translate(50, 90)">
+    <rect x="0" y="0" width="150" height="80" rx="10" fill="#21262d" stroke="#58a6ff" stroke-width="2"/>
+    <text x="75" y="30" font-family="system-ui" font-size="12" fill="#58a6ff" text-anchor="middle" font-weight="600">1. USER INPUT</text>
+    <text x="75" y="50" font-family="SF Mono, monospace" font-size="9" fill="#8b949e" text-anchor="middle">"Test my website"</text>
+    <text x="75" y="65" font-family="SF Mono, monospace" font-size="9" fill="#a5d6ff" text-anchor="middle">https://myapp.com</text>
+  </g>
+
+  <!-- Arrow 1 -->
+  <line x1="200" y1="130" x2="260" y2="130" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Step 2: Sitemap Crawler -->
+  <g transform="translate(270, 80)">
+    <rect x="0" y="0" width="180" height="100" rx="10" fill="#161b22" stroke="#3fb950" stroke-width="2"/>
+    <rect x="0" y="0" width="180" height="25" rx="10" fill="#238636"/>
+    <text x="90" y="17" font-family="SF Mono, monospace" font-size="10" fill="white" text-anchor="middle">sitemap_crawler</text>
+    <text x="15" y="45" font-family="system-ui" font-size="10" fill="#8b949e">Discovers all pages</text>
+    <text x="15" y="60" font-family="SF Mono, monospace" font-size="9" fill="#3fb950">+ 47 URLs found</text>
+    <text x="15" y="75" font-family="SF Mono, monospace" font-size="9" fill="#3fb950">+ Sitemap parsed</text>
+    <text x="15" y="90" font-family="SF Mono, monospace" font-size="9" fill="#3fb950">+ Link tree built</text>
+  </g>
+
+  <!-- Arrow 2 (splits into 3) -->
+  <line x1="450" y1="130" x2="510" y2="130" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Step 3: Parallel Tools -->
+  <!-- Tool 3a: batch_screenshot -->
+  <g transform="translate(520, 50)">
+    <rect x="0" y="0" width="170" height="75" rx="8" fill="#161b22" stroke="#58a6ff" stroke-width="2"/>
+    <rect x="0" y="0" width="170" height="22" rx="8" fill="#1f6feb"/>
+    <text x="85" y="15" font-family="SF Mono, monospace" font-size="9" fill="white" text-anchor="middle">batch_screenshot_urls</text>
+    <text x="10" y="40" font-family="system-ui" font-size="9" fill="#8b949e">Captures all 47 pages</text>
+    <text x="10" y="55" font-family="SF Mono, monospace" font-size="8" fill="#58a6ff">Desktop + Mobile views</text>
+    <text x="10" y="68" font-family="SF Mono, monospace" font-size="8" fill="#3fb950">94 screenshots saved</text>
+  </g>
+
+  <!-- Tool 3b: navigation_flow -->
+  <g transform="translate(520, 135)">
+    <rect x="0" y="0" width="170" height="75" rx="8" fill="#161b22" stroke="#a371f7" stroke-width="2"/>
+    <rect x="0" y="0" width="170" height="22" rx="8" fill="#8957e5"/>
+    <text x="85" y="15" font-family="SF Mono, monospace" font-size="9" fill="white" text-anchor="middle">navigation_flow_validator</text>
+    <text x="10" y="40" font-family="system-ui" font-size="9" fill="#8b949e">Tests user journeys</text>
+    <text x="10" y="55" font-family="SF Mono, monospace" font-size="8" fill="#a371f7">Login, checkout, signup</text>
+    <text x="10" y="68" font-family="SF Mono, monospace" font-size="8" fill="#3fb950">12 flows validated</text>
+  </g>
+
+  <!-- Tool 3c: performance -->
+  <g transform="translate(520, 220)">
+    <rect x="0" y="0" width="170" height="75" rx="8" fill="#161b22" stroke="#d29922" stroke-width="2"/>
+    <rect x="0" y="0" width="170" height="22" rx="8" fill="#9e6a03"/>
+    <text x="85" y="15" font-family="SF Mono, monospace" font-size="9" fill="white" text-anchor="middle">performance_analysis</text>
+    <text x="10" y="40" font-family="system-ui" font-size="9" fill="#8b949e">Core Web Vitals</text>
+    <text x="10" y="55" font-family="SF Mono, monospace" font-size="8" fill="#d29922">LCP, FID, CLS metrics</text>
+    <text x="10" y="68" font-family="SF Mono, monospace" font-size="8" fill="#3fb950">5 slow pages flagged</text>
+  </g>
+
+  <!-- Arrows from parallel tools -->
+  <line x1="690" y1="87" x2="720" y2="130" stroke="#58a6ff" stroke-width="2"/>
+  <line x1="690" y1="172" x2="720" y2="172" stroke="#a371f7" stroke-width="2"/>
+  <line x1="690" y1="257" x2="720" y2="215" stroke="#d29922" stroke-width="2"/>
+
+  <!-- Step 4: Results aggregation -->
+  <g transform="translate(730, 100)">
+    <rect x="0" y="0" width="140" height="145" rx="10" fill="#21262d" stroke="#3fb950" stroke-width="2"/>
+    <text x="70" y="25" font-family="system-ui" font-size="11" fill="#3fb950" text-anchor="middle" font-weight="600">RESULTS</text>
+
+    <rect x="10" y="35" width="120" height="22" rx="4" fill="#238636"/>
+    <text x="70" y="50" font-family="SF Mono, monospace" font-size="9" fill="white" text-anchor="middle">94 Screenshots</text>
+
+    <rect x="10" y="62" width="120" height="22" rx="4" fill="#f85149"/>
+    <text x="70" y="77" font-family="SF Mono, monospace" font-size="9" fill="white" text-anchor="middle">3 Broken Links</text>
+
+    <rect x="10" y="89" width="120" height="22" rx="4" fill="#d29922"/>
+    <text x="70" y="104" font-family="SF Mono, monospace" font-size="9" fill="white" text-anchor="middle">5 Slow Pages</text>
+
+    <rect x="10" y="116" width="120" height="22" rx="4" fill="#1f6feb"/>
+    <text x="70" y="131" font-family="SF Mono, monospace" font-size="9" fill="white" text-anchor="middle">Full Report</text>
+  </g>
+
+  <!-- Bottom Section: Example Output -->
+  <g transform="translate(50, 320)">
+    <rect x="0" y="0" width="800" height="160" rx="10" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
+    <rect x="0" y="0" width="800" height="28" rx="10" fill="#161b22"/>
+    <text x="20" y="19" font-family="SF Mono, monospace" font-size="11" fill="#8b949e">Example AI Response with VUDA Results</text>
+
+    <text x="20" y="55" font-family="system-ui" font-size="12" fill="#c9d1d9">I've completed a comprehensive analysis of your website. Here's what I found:</text>
+
+    <g transform="translate(20, 70)">
+      <circle cx="8" cy="8" r="4" fill="#3fb950"/>
+      <text x="20" y="12" font-family="system-ui" font-size="11" fill="#c9d1d9">Crawled 47 pages and captured 94 screenshots (desktop + mobile)</text>
+    </g>
+
+    <g transform="translate(20, 92)">
+      <circle cx="8" cy="8" r="4" fill="#f85149"/>
+      <text x="20" y="12" font-family="system-ui" font-size="11" fill="#c9d1d9">Found 3 broken links: /about/team (404), /blog/old-post (404), /products/legacy (410)</text>
+    </g>
+
+    <g transform="translate(20, 114)">
+      <circle cx="8" cy="8" r="4" fill="#d29922"/>
+      <text x="20" y="12" font-family="system-ui" font-size="11" fill="#c9d1d9">5 pages have slow load times (over 3s): /gallery, /products, /checkout...</text>
+    </g>
+
+    <g transform="translate(20, 136)">
+      <circle cx="8" cy="8" r="4" fill="#3fb950"/>
+      <text x="20" y="12" font-family="system-ui" font-size="11" fill="#c9d1d9">All 12 critical user flows (login, signup, checkout) work correctly</text>
+    </g>
+  </g>
+
+  <!-- Time indicator -->
+  <rect x="720" y="310" width="130" height="40" rx="8" fill="#21262d" stroke="#58a6ff" stroke-width="1"/>
+  <text x="785" y="328" font-family="system-ui" font-size="10" fill="#8b949e" text-anchor="middle">Total Time</text>
+  <text x="785" y="344" font-family="SF Mono, monospace" font-size="14" fill="#3fb950" text-anchor="middle" font-weight="600">23.4 seconds</text>
+</svg>

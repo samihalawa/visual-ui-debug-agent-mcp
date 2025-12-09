@@ -35,6 +35,28 @@
 
 ---
 
+## See It In Action
+
+<p align="center">
+  <img src="publicresources/tool-call-mockup.svg" alt="Claude Desktop calling VUDA MCP tools" width="100%">
+</p>
+
+<p align="center">
+  <i>Claude Desktop using VUDA to automatically crawl a site, find broken links, and capture screenshots</i>
+</p>
+
+---
+
+## Automated Testing Workflow
+
+<p align="center">
+  <img src="publicresources/automation-workflow.svg" alt="VUDA Automated Testing Workflow" width="100%">
+</p>
+
+One command triggers a comprehensive site analysis - crawl all pages, screenshot everything, validate user flows, and measure performance in seconds.
+
+---
+
 ## Quick Start
 
 ### Installation
@@ -224,6 +246,10 @@ const result = await client.callTool("enhanced_page_analyzer", {
 ---
 
 ## Why VUDA?
+
+<p align="center">
+  <img src="publicresources/before-after-mockup.svg" alt="VUDA Before and After Comparison" width="100%">
+</p>
 
 | Feature | VUDA | Other Solutions |
 |---------|------|-----------------|
