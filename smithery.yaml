@@ -28,9 +28,9 @@ startCommand:
         minimum: 1000
         maximum: 120000
   commandFunction: |-
-    (config) => ({ 
-      command: 'node', 
-      args: ['build/index.js'], 
+    (config) => ({
+      command: 'node',
+      args: ['dist/index.js'], 
       env: { 
         DEBUG: config.debug ? 'true' : 'false',
         HEADLESS: config.headless ? 'true' : 'false', 
