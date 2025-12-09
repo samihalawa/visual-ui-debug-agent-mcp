@@ -1,166 +1,171 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="900" height="600">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="900" height="520">
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#0d1117"/>
-      <stop offset="100%" style="stop-color:#161b22"/>
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
     </linearGradient>
-    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#3fb950"/>
-      <stop offset="100%" style="stop-color:#238636"/>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#252542"/>
+      <stop offset="100%" style="stop-color:#1e1e38"/>
     </linearGradient>
-    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#58a6ff"/>
-      <stop offset="100%" style="stop-color:#1f6feb"/>
+    <linearGradient id="blueAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
     </linearGradient>
-    <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#a371f7"/>
-      <stop offset="100%" style="stop-color:#8957e5"/>
+    <linearGradient id="greenAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#11998e"/>
+      <stop offset="100%" style="stop-color:#38ef7d"/>
     </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
     <filter id="glow">
       <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-      <feMerge>
-        <feMergeNode in="coloredBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
 
-  <rect width="900" height="600" fill="url(#bgGrad)"/>
+  <rect width="900" height="520" fill="url(#bgGrad)"/>
 
-  <!-- Title -->
-  <text x="450" y="35" font-family="SF Mono, Consolas, monospace" font-size="16" fill="#58a6ff" text-anchor="middle" font-weight="600">Claude Desktop + VUDA MCP Tool Calls</text>
+  <!-- Subtle grid pattern -->
+  <defs>
+    <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#ffffff" stroke-width="0.3" opacity="0.05"/>
+    </pattern>
+  </defs>
+  <rect width="900" height="520" fill="url(#grid)"/>
 
-  <!-- User Message -->
-  <g transform="translate(30, 55)">
-    <rect x="0" y="0" width="840" height="50" rx="8" fill="#21262d" stroke="#30363d" stroke-width="1"/>
-    <circle cx="25" cy="25" r="12" fill="#a371f7"/>
-    <text x="25" y="30" font-family="system-ui" font-size="12" fill="white" text-anchor="middle">U</text>
-    <text x="50" y="20" font-family="system-ui" font-size="11" fill="#8b949e">User</text>
-    <text x="50" y="38" font-family="system-ui" font-size="13" fill="#c9d1d9">"Test all links on example.com and check for broken pages"</text>
-  </g>
+  <!-- Claude Desktop Window -->
+  <g transform="translate(30, 25)" filter="url(#shadow)">
+    <!-- Window frame -->
+    <rect width="840" height="470" rx="12" fill="#1e1e32" stroke="#333355" stroke-width="1"/>
 
-  <!-- AI Response with Tool Call 1 -->
-  <g transform="translate(30, 115)">
-    <rect x="0" y="0" width="840" height="140" rx="8" fill="#161b22" stroke="#238636" stroke-width="2"/>
-    <circle cx="25" cy="20" r="12" fill="url(#greenGrad)"/>
-    <text x="25" y="25" font-family="system-ui" font-size="10" fill="white" text-anchor="middle">AI</text>
-    <text x="50" y="18" font-family="system-ui" font-size="11" fill="#3fb950">Claude</text>
-    <text x="100" y="18" font-family="SF Mono, monospace" font-size="10" fill="#6e7681">using VUDA MCP</text>
+    <!-- Title bar -->
+    <rect width="840" height="40" rx="12" fill="#252545"/>
+    <rect y="28" width="840" height="12" fill="#252545"/>
 
-    <!-- Tool Call Box -->
-    <rect x="15" y="35" width="810" height="95" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
-    <rect x="15" y="35" width="810" height="22" rx="6" fill="#21262d"/>
-    <text x="30" y="51" font-family="SF Mono, monospace" font-size="11" fill="#58a6ff">Tool Call: sitemap_crawler</text>
-    <circle cx="800" cy="46" r="6" fill="#3fb950"/>
+    <!-- Window controls -->
+    <circle cx="22" cy="20" r="6" fill="#ff5f57"/>
+    <circle cx="44" cy="20" r="6" fill="#ffbd2e"/>
+    <circle cx="66" cy="20" r="6" fill="#28ca42"/>
 
-    <text x="30" y="75" font-family="SF Mono, monospace" font-size="11" fill="#8b949e">{</text>
-    <text x="45" y="92" font-family="SF Mono, monospace" font-size="11" fill="#a371f7">"url"</text>
-    <text x="80" y="92" font-family="SF Mono, monospace" font-size="11" fill="#8b949e">:</text>
-    <text x="95" y="92" font-family="SF Mono, monospace" font-size="11" fill="#a5d6ff">"https://example.com"</text>
-    <text x="250" y="92" font-family="SF Mono, monospace" font-size="11" fill="#8b949e">,</text>
-    <text x="45" y="109" font-family="SF Mono, monospace" font-size="11" fill="#a371f7">"maxDepth"</text>
-    <text x="120" y="109" font-family="SF Mono, monospace" font-size="11" fill="#8b949e">:</text>
-    <text x="135" y="109" font-family="SF Mono, monospace" font-size="11" fill="#79c0ff">3</text>
-    <text x="145" y="109" font-family="SF Mono, monospace" font-size="11" fill="#8b949e">,</text>
-    <text x="160" y="109" font-family="SF Mono, monospace" font-size="11" fill="#a371f7">"checkBrokenLinks"</text>
-    <text x="300" y="109" font-family="SF Mono, monospace" font-size="11" fill="#8b949e">:</text>
-    <text x="315" y="109" font-family="SF Mono, monospace" font-size="11" fill="#79c0ff">true</text>
-    <text x="30" y="123" font-family="SF Mono, monospace" font-size="11" fill="#8b949e">}</text>
-  </g>
+    <!-- App title -->
+    <text x="420" y="25" font-family="SF Pro Display, -apple-system, sans-serif" font-size="13" fill="#8888aa" text-anchor="middle">Claude Desktop</text>
 
-  <!-- Tool Result -->
-  <g transform="translate(30, 265)">
-    <rect x="0" y="0" width="840" height="150" rx="8" fill="#0d1117" stroke="#1f6feb" stroke-width="1"/>
-    <rect x="0" y="0" width="840" height="25" rx="8" fill="#161b22"/>
-    <text x="15" y="17" font-family="SF Mono, monospace" font-size="11" fill="#58a6ff">Result: 47 pages crawled in 12.3s</text>
-    <circle cx="810" cy="12" r="6" fill="#3fb950"/>
+    <!-- Chat area -->
+    <g transform="translate(20, 55)">
 
-    <!-- Results visualization -->
-    <g transform="translate(15, 35)">
-      <rect x="0" y="0" width="200" height="105" rx="4" fill="#21262d"/>
-      <text x="10" y="20" font-family="SF Mono, monospace" font-size="10" fill="#3fb950">Pages Found: 47</text>
-      <text x="10" y="38" font-family="SF Mono, monospace" font-size="10" fill="#f85149">Broken Links: 3</text>
-      <text x="10" y="56" font-family="SF Mono, monospace" font-size="10" fill="#d29922">Slow Pages: 5</text>
-      <text x="10" y="74" font-family="SF Mono, monospace" font-size="10" fill="#58a6ff">Redirects: 8</text>
-      <text x="10" y="92" font-family="SF Mono, monospace" font-size="10" fill="#8b949e">Avg Load: 1.2s</text>
+      <!-- User message bubble -->
+      <g transform="translate(500, 0)">
+        <rect width="290" height="50" rx="18" fill="#667eea"/>
+        <text x="20" y="30" font-family="SF Pro Text, -apple-system, sans-serif" font-size="14" fill="white">Test all links on example.com</text>
+      </g>
+
+      <!-- AI Response with tool use -->
+      <g transform="translate(20, 70)">
+        <!-- Avatar -->
+        <circle cx="18" cy="18" r="18" fill="url(#greenAccent)"/>
+        <text x="18" y="24" font-family="SF Pro Text, sans-serif" font-size="14" fill="white" text-anchor="middle" font-weight="600">AI</text>
+
+        <!-- Message area -->
+        <g transform="translate(50, 0)">
+          <rect width="700" height="320" rx="16" fill="url(#cardGrad)" stroke="#333355" stroke-width="1"/>
+
+          <!-- Tool badge -->
+          <rect x="15" y="15" width="140" height="28" rx="14" fill="url(#blueAccent)"/>
+          <text x="85" y="34" font-family="SF Mono, monospace" font-size="11" fill="white" text-anchor="middle">sitemap_crawler</text>
+
+          <!-- Status indicator -->
+          <circle cx="680" cy="29" r="8" fill="#28ca42" filter="url(#glow)"/>
+
+          <!-- Results cards -->
+          <g transform="translate(15, 55)">
+            <!-- Stats row -->
+            <g transform="translate(0, 0)">
+              <rect width="160" height="70" rx="10" fill="#1a1a30" stroke="#333355" stroke-width="1"/>
+              <text x="80" y="28" font-family="SF Pro Display, sans-serif" font-size="28" fill="#38ef7d" text-anchor="middle" font-weight="700">47</text>
+              <text x="80" y="50" font-family="SF Pro Text, sans-serif" font-size="12" fill="#8888aa" text-anchor="middle">Pages Found</text>
+            </g>
+
+            <g transform="translate(175, 0)">
+              <rect width="160" height="70" rx="10" fill="#1a1a30" stroke="#333355" stroke-width="1"/>
+              <text x="80" y="28" font-family="SF Pro Display, sans-serif" font-size="28" fill="#ff6b6b" text-anchor="middle" font-weight="700">3</text>
+              <text x="80" y="50" font-family="SF Pro Text, sans-serif" font-size="12" fill="#8888aa" text-anchor="middle">Broken Links</text>
+            </g>
+
+            <g transform="translate(350, 0)">
+              <rect width="160" height="70" rx="10" fill="#1a1a30" stroke="#333355" stroke-width="1"/>
+              <text x="80" y="28" font-family="SF Pro Display, sans-serif" font-size="28" fill="#ffd93d" text-anchor="middle" font-weight="700">1.2s</text>
+              <text x="80" y="50" font-family="SF Pro Text, sans-serif" font-size="12" fill="#8888aa" text-anchor="middle">Avg Load Time</text>
+            </g>
+
+            <g transform="translate(525, 0)">
+              <rect width="145" height="70" rx="10" fill="#1a1a30" stroke="#333355" stroke-width="1"/>
+              <text x="72" y="28" font-family="SF Pro Display, sans-serif" font-size="28" fill="#667eea" text-anchor="middle" font-weight="700">94</text>
+              <text x="72" y="50" font-family="SF Pro Text, sans-serif" font-size="12" fill="#8888aa" text-anchor="middle">Screenshots</text>
+            </g>
+          </g>
+
+          <!-- Screenshot thumbnails -->
+          <g transform="translate(15, 140)">
+            <text x="0" y="15" font-family="SF Pro Text, sans-serif" font-size="12" fill="#8888aa">Captured Pages</text>
+
+            <g transform="translate(0, 25)">
+              <rect width="105" height="70" rx="6" fill="#2a2a45" stroke="#444466" stroke-width="1"/>
+              <rect x="8" y="8" width="89" height="12" rx="2" fill="#333355"/>
+              <rect x="8" y="25" width="60" height="6" rx="1" fill="#444466"/>
+              <rect x="8" y="35" width="75" height="6" rx="1" fill="#444466"/>
+              <rect x="8" y="45" width="45" height="6" rx="1" fill="#444466"/>
+              <text x="52" y="65" font-family="SF Mono, monospace" font-size="9" fill="#667eea" text-anchor="middle">/home</text>
+            </g>
+
+            <g transform="translate(115, 25)">
+              <rect width="105" height="70" rx="6" fill="#2a2a45" stroke="#444466" stroke-width="1"/>
+              <rect x="8" y="8" width="89" height="12" rx="2" fill="#333355"/>
+              <rect x="8" y="25" width="55" height="6" rx="1" fill="#444466"/>
+              <rect x="8" y="35" width="70" height="6" rx="1" fill="#444466"/>
+              <rect x="8" y="45" width="40" height="6" rx="1" fill="#444466"/>
+              <text x="52" y="65" font-family="SF Mono, monospace" font-size="9" fill="#667eea" text-anchor="middle">/about</text>
+            </g>
+
+            <g transform="translate(230, 25)">
+              <rect width="105" height="70" rx="6" fill="#2a2a45" stroke="#444466" stroke-width="1"/>
+              <rect x="8" y="8" width="89" height="12" rx="2" fill="#333355"/>
+              <rect x="8" y="25" width="65" height="6" rx="1" fill="#444466"/>
+              <rect x="8" y="35" width="50" height="6" rx="1" fill="#444466"/>
+              <rect x="8" y="45" width="70" height="6" rx="1" fill="#444466"/>
+              <text x="52" y="65" font-family="SF Mono, monospace" font-size="9" fill="#667eea" text-anchor="middle">/products</text>
+            </g>
+
+            <g transform="translate(345, 25)">
+              <rect width="105" height="70" rx="6" fill="#2a2a45" stroke="#ff6b6b" stroke-width="2"/>
+              <rect x="8" y="8" width="89" height="12" rx="2" fill="#333355"/>
+              <rect x="8" y="28" width="89" height="30" rx="2" fill="#3a2a35"/>
+              <text x="52" y="48" font-family="SF Pro Text, sans-serif" font-size="10" fill="#ff6b6b" text-anchor="middle">404</text>
+              <text x="52" y="65" font-family="SF Mono, monospace" font-size="9" fill="#ff6b6b" text-anchor="middle">/team</text>
+            </g>
+
+            <g transform="translate(460, 25)">
+              <rect width="105" height="70" rx="6" fill="#2a2a45" stroke="#444466" stroke-width="1"/>
+              <rect x="30" y="20" width="45" height="30" rx="4" fill="#333355"/>
+              <text x="52" y="40" font-family="SF Pro Display, sans-serif" font-size="16" fill="#667eea" text-anchor="middle">+43</text>
+              <text x="52" y="65" font-family="SF Mono, monospace" font-size="9" fill="#8888aa" text-anchor="middle">more</text>
+            </g>
+          </g>
+
+          <!-- Progress bar -->
+          <g transform="translate(15, 250)">
+            <rect width="670" height="8" rx="4" fill="#1a1a30"/>
+            <rect width="670" height="8" rx="4" fill="url(#greenAccent)"/>
+          </g>
+
+          <!-- Bottom status -->
+          <g transform="translate(15, 275)">
+            <text x="0" y="15" font-family="SF Pro Text, sans-serif" font-size="12" fill="#38ef7d">Completed in 12.3s</text>
+            <text x="670" y="15" font-family="SF Pro Text, sans-serif" font-size="12" fill="#8888aa" text-anchor="end">VUDA MCP</text>
+          </g>
+        </g>
+      </g>
     </g>
-
-    <!-- Visual bar chart -->
-    <g transform="translate(230, 35)">
-      <text x="0" y="15" font-family="system-ui" font-size="10" fill="#8b949e">Response Status</text>
-      <rect x="0" y="25" width="280" height="12" rx="2" fill="#238636"/>
-      <rect x="280" y="25" width="30" height="12" rx="2" fill="#d29922"/>
-      <rect x="310" y="25" width="18" height="12" rx="2" fill="#f85149"/>
-      <text x="0" y="52" font-family="SF Mono, monospace" font-size="9" fill="#3fb950">200 OK (85%)</text>
-      <text x="100" y="52" font-family="SF Mono, monospace" font-size="9" fill="#d29922">3xx (9%)</text>
-      <text x="170" y="52" font-family="SF Mono, monospace" font-size="9" fill="#f85149">4xx (6%)</text>
-
-      <!-- Broken links list -->
-      <text x="0" y="75" font-family="system-ui" font-size="10" fill="#f85149">Broken Links Detected:</text>
-      <text x="0" y="92" font-family="SF Mono, monospace" font-size="9" fill="#8b949e">/about/team → 404</text>
-      <text x="150" y="92" font-family="SF Mono, monospace" font-size="9" fill="#8b949e">/blog/old-post → 404</text>
-      <text x="300" y="92" font-family="SF Mono, monospace" font-size="9" fill="#8b949e">/products/legacy → 410</text>
-    </g>
-
-    <!-- Screenshot thumbnails -->
-    <g transform="translate(590, 35)">
-      <text x="0" y="15" font-family="system-ui" font-size="10" fill="#8b949e">Screenshots Captured</text>
-      <rect x="0" y="22" width="55" height="35" rx="3" fill="#30363d" stroke="#58a6ff" stroke-width="1"/>
-      <rect x="60" y="22" width="55" height="35" rx="3" fill="#30363d" stroke="#58a6ff" stroke-width="1"/>
-      <rect x="120" y="22" width="55" height="35" rx="3" fill="#30363d" stroke="#58a6ff" stroke-width="1"/>
-      <rect x="180" y="22" width="55" height="35" rx="3" fill="#30363d" stroke="#58a6ff" stroke-width="1"/>
-      <text x="27" y="45" font-family="SF Mono, monospace" font-size="8" fill="#58a6ff" text-anchor="middle">home</text>
-      <text x="87" y="45" font-family="SF Mono, monospace" font-size="8" fill="#58a6ff" text-anchor="middle">about</text>
-      <text x="147" y="45" font-family="SF Mono, monospace" font-size="8" fill="#58a6ff" text-anchor="middle">blog</text>
-      <text x="207" y="45" font-family="SF Mono, monospace" font-size="8" fill="#58a6ff" text-anchor="middle">+44</text>
-    </g>
-  </g>
-
-  <!-- AI Follow-up with navigation_flow_validator -->
-  <g transform="translate(30, 425)">
-    <rect x="0" y="0" width="840" height="85" rx="8" fill="#161b22" stroke="#a371f7" stroke-width="2"/>
-    <circle cx="25" cy="20" r="12" fill="url(#purpleGrad)"/>
-    <text x="25" y="25" font-family="system-ui" font-size="10" fill="white" text-anchor="middle">AI</text>
-    <text x="50" y="18" font-family="system-ui" font-size="11" fill="#a371f7">Claude</text>
-    <text x="15" y="48" font-family="system-ui" font-size="12" fill="#c9d1d9">Found 3 broken links. Now validating navigation flows...</text>
-
-    <!-- Second Tool Call inline -->
-    <rect x="15" y="58" width="350" height="22" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
-    <text x="25" y="73" font-family="SF Mono, monospace" font-size="10" fill="#58a6ff">Tool: navigation_flow_validator</text>
-    <circle cx="350" cy="69" r="5" fill="#d29922">
-      <animate attributeName="fill" values="#d29922;#3fb950;#3fb950" dur="2s" repeatCount="indefinite"/>
-    </circle>
-
-    <rect x="375" y="58" width="250" height="22" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
-    <text x="385" y="73" font-family="SF Mono, monospace" font-size="10" fill="#58a6ff">Tool: batch_screenshot_urls</text>
-    <circle cx="610" cy="69" r="5" fill="#d29922">
-      <animate attributeName="fill" values="#d29922;#d29922;#3fb950" dur="2s" repeatCount="indefinite"/>
-    </circle>
-  </g>
-
-  <!-- Status bar -->
-  <g transform="translate(30, 520)">
-    <rect x="0" y="0" width="840" height="60" rx="8" fill="#21262d" stroke="#30363d" stroke-width="1"/>
-    <text x="20" y="25" font-family="system-ui" font-size="12" fill="#8b949e">Session Stats:</text>
-
-    <rect x="130" y="10" width="100" height="40" rx="4" fill="#0d1117"/>
-    <text x="180" y="28" font-family="SF Mono, monospace" font-size="10" fill="#3fb950" text-anchor="middle">5 Tools Used</text>
-    <text x="180" y="42" font-family="SF Mono, monospace" font-size="9" fill="#6e7681" text-anchor="middle">in this session</text>
-
-    <rect x="240" y="10" width="100" height="40" rx="4" fill="#0d1117"/>
-    <text x="290" y="28" font-family="SF Mono, monospace" font-size="10" fill="#58a6ff" text-anchor="middle">47 Screenshots</text>
-    <text x="290" y="42" font-family="SF Mono, monospace" font-size="9" fill="#6e7681" text-anchor="middle">auto-captured</text>
-
-    <rect x="350" y="10" width="100" height="40" rx="4" fill="#0d1117"/>
-    <text x="400" y="28" font-family="SF Mono, monospace" font-size="10" fill="#a371f7" text-anchor="middle">3 Issues Found</text>
-    <text x="400" y="42" font-family="SF Mono, monospace" font-size="9" fill="#6e7681" text-anchor="middle">broken links</text>
-
-    <rect x="460" y="10" width="100" height="40" rx="4" fill="#0d1117"/>
-    <text x="510" y="28" font-family="SF Mono, monospace" font-size="10" fill="#d29922" text-anchor="middle">18.7s Total</text>
-    <text x="510" y="42" font-family="SF Mono, monospace" font-size="9" fill="#6e7681" text-anchor="middle">execution time</text>
-
-    <!-- VUDA badge -->
-    <rect x="700" y="12" width="120" height="36" rx="18" fill="url(#blueGrad)"/>
-    <text x="760" y="35" font-family="system-ui" font-size="12" fill="white" text-anchor="middle" font-weight="600">Powered by VUDA</text>
   </g>
 </svg>
