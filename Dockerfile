@@ -54,4 +54,4 @@ RUN mkdir -p ./temp && chmod 755 ./temp
 ENV NODE_ENV=production
 
 # Start the server with stdio transport
-CMD ["node", "build/index.js"] 
+CMD ["node", "dist/index.js"] 

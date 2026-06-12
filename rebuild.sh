@@ -17,10 +17,10 @@ mkdir -p "$(dirname "$0")/temp"
 
 # Copy the build files to the correct location
 echo "📋 Finalizing build..."
-mkdir -p "$(dirname "$0")/build"
+mkdir -p "$(dirname "$0")/dist"
 
 # Setup script
 echo "✅ Setup complete!"
-echo "To run the server, use: node build/index.js"
+echo "To run the server, use: node dist/index.js"
 
 echo "🚀 Rebuild process completed!" 

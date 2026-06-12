@@ -12,7 +12,7 @@ const smitheryConfig = fs.readFileSync('smithery.yaml', 'utf8');
 // Hard code it for simplicity
 const commandFunctionStr = `(config) => ({ 
   command: 'node', 
-  args: ['build/index.js'], 
+  args: ['dist/index.js'], 
   env: { 
     PORT: config.port?.toString(), 
     DEBUG: config.debug ? "true" : "false",

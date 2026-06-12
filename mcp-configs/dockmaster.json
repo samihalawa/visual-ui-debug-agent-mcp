@@ -2,7 +2,7 @@
   "type": "mcp-server",
   "name": "mcp-ai-vision-debug-ui-automation",
   "displayName": "MCP AI Vision Debug UI Automation",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "MCP server for visual analysis and automated UI testing",
   "author": "samihalawa",
   "license": "ISC",
@@ -14,7 +14,7 @@
   },
   "launchCommand": {
     "command": "node",
-    "args": ["build/index.js"]
+    "args": ["dist/index.js"]
   },
   "config": {
     "port": {

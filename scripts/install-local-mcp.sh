@@ -55,7 +55,7 @@ if [ -d "$DOCKMASTER_DIR" ]; then
   
   # Copy files
   echo "📋 Copying files to MCP Dockmaster..."
-  cp -R build "$SERVER_DIR/"
+  cp -R dist "$SERVER_DIR/"
   cp package.json README.md LICENSE "$SERVER_DIR/"
   cp -R publicresources "$SERVER_DIR/"
   cp mcp-configs/dockmaster.json "$SERVER_DIR/mcp.json"
@@ -80,7 +80,7 @@ if [ -d "$CONFIG_DIR" ]; then
   "description": "MCP server for visual analysis and automated UI testing",
   "version": "$(node -p "require('./package.json').version")",
   "type": "server",
-  "startCommand": "node build/index.js",
+  "startCommand": "node dist/index.js",
   "env": {
     "PORT": "8080",
     "DEBUG": "false"

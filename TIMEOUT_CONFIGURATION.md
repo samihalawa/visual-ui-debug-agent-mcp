@@ -30,7 +30,7 @@ You can customize timeout behavior by setting these environment variables:
 ### Basic Usage (Default Values)
 ```bash
 # Run with default timeout values
-node build/index.js
+node dist/index.js
 ```
 
 ### Custom Timeout Configuration
@@ -41,7 +41,7 @@ export VUDA_NAVIGATION_TIMEOUT=30000
 export VUDA_SELECTOR_TIMEOUT=20000
 export VUDA_STABILITY_WAIT=10000
 
-node build/index.js
+node dist/index.js
 ```
 
 ### High-Latency Environment
@@ -53,7 +53,7 @@ export VUDA_SELECTOR_TIMEOUT=45000
 export VUDA_STABILITY_WAIT=15000
 export VUDA_UI_UPDATE_WAIT=5000
 
-node build/index.js
+node dist/index.js
 ```
 
 ### Fast Local Testing
@@ -64,7 +64,7 @@ export VUDA_NAVIGATION_TIMEOUT=8000
 export VUDA_SELECTOR_TIMEOUT=6000
 export VUDA_STABILITY_WAIT=2000
 
-node build/index.js
+node dist/index.js
 ```
 
 ## Timeout Improvements Summary
