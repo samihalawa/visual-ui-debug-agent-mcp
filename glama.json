@@ -1,85 +1,29 @@
 {
   "name": "visual-ui-debug-agent-mcp",
   "version": "1.0.2",
-  "description": "VUDA: Visual UI Debug Agent - An autonomous MCP for visual testing and debugging of user interfaces",
+  "description": "Visual UI testing and debugging tools for MCP clients, powered by Playwright",
   "author": "samihalawa",
   "license": "ISC",
   "homepage": "https://github.com/samihalawa/visual-ui-debug-agent-mcp",
   "repository": "https://github.com/samihalawa/visual-ui-debug-agent-mcp",
-  "icon": "https://raw.githubusercontent.com/samihalawa/visual-ui-debug-agent-mcp/main/publicresources/icon.png",
+  "icon": "https://raw.githubusercontent.com/samihalawa/visual-ui-debug-agent-mcp/main/publicresources/icon.svg",
   "tags": [
-    "vuda",
-    "visual",
-    "ui",
-    "debug",
-    "agent",
-    "ai",
-    "vision",
-    "testing",
-    "automation",
     "mcp",
     "playwright",
+    "ui-testing",
     "visual-testing",
-    "web",
-    "autonomous"
+    "browser-automation",
+    "debugging"
   ],
   "compatibility": {
-    "node": ">=18"
-  },
-  "settings": {
-    "port": {
-      "type": "number",
-      "default": 8080,
-      "description": "Port number for the server to run on"
-    },
-    "debugMode": {
-      "type": "boolean",
-      "default": false,
-      "description": "Enable debug mode for verbose logging"
-    },
-    "headless": {
-      "type": "boolean",
-      "default": true,
-      "description": "Run browser in headless mode"
-    },
-    "screenshotQuality": {
-      "type": "number",
-      "default": 80,
-      "min": 0,
-      "max": 100,
-      "description": "Quality level for screenshots (0-100)"
-    },
-    "screenshotDir": {
-      "type": "string",
-      "default": "./temp",
-      "description": "Directory to store screenshots"
-    },
-    "maxConcurrentSessions": {
-      "type": "number",
-      "default": 5,
-      "min": 1,
-      "max": 20,
-      "description": "Maximum number of concurrent browser sessions"
-    }
+    "node": ">=20"
   },
   "installation": {
     "methods": [
       {
         "type": "npm",
-        "command": "npm install -g visual-ui-debug-agent-mcp"
-      },
-      {
-        "type": "docker",
-        "command": "docker pull luigi1234/visual-ui-debug-agent:latest"
-      },
-      {
-        "type": "git",
-        "command": "git clone https://github.com/samihalawa/visual-ui-debug-agent-mcp.git"
+        "command": "npx -y visual-ui-debug-agent-mcp"
       }
-    ],
-    "requirements": [
-      "Node.js v18 or later",
-      "npm v7 or later"
     ]
   }
 }

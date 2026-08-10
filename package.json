@@ -1,58 +1,47 @@
 {
   "name": "visual-ui-debug-agent-mcp",
   "version": "1.0.2",
-  "description": "VUDA: Visual UI Debug Agent - An autonomous MCP for visual testing and debugging of user interfaces",
+  "description": "Visual UI testing and debugging tools for MCP clients, powered by Playwright",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
     "vuda": "dist/index.js",
-    "visual-ui-debug-agent": "dist/index.js",
-    "vuda-smithery": "scripts/start-smithery.js"
+    "visual-ui-debug-agent": "dist/index.js"
   },
+  "files": [
+    "dist",
+    "prompts"
+  ],
   "scripts": {
-    "build": "tsc && shx chmod +x dist/index.js",
+    "build": "shx rm -rf dist && tsc && shx chmod +x dist/index.js",
     "start": "node dist/index.js",
     "prepare": "npm run build",
     "dev": "npm run build && npm start",
     "init-repo": "node scripts/init-repo.js",
     "watch": "tsc --watch",
-    "release": "npm version patch && ./scripts/mcp-deploy.sh npm",
-    "deploy:npm": "./scripts/mcp-deploy.sh npm",
-    "deploy:docker": "./scripts/mcp-deploy.sh docker",
-    "deploy:cross-platform": "./scripts/mcp-deploy.sh cross-platform",
-    "deploy:all": "./scripts/mcp-deploy.sh all",
-    "install:local": "./scripts/install-local-mcp.sh",
-    "test": "node scripts/test-mcp.js",
-    "test:server": "concurrently \"npm run start\" \"sleep 3 && npm run test\"",
-    "smithery": "node scripts/run-with-smithery.js",
-    "smithery:key": "./scripts/run-with-smithery-key.sh",
-    "smithery:install": "./scripts/smithery-install.sh",
-    "smithery:run": "./scripts/smithery-run.sh",
-    "smithery:publish": "./scripts/publish-to-smithery.sh",
-    "smithery:api-publish": "node scripts/smithery-api-publish.js",
-    "test:smithery": "node scripts/verify-smithery.js"
+    "test": "npm run build && node scripts/test-mcp.js"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/samihalawa/visual-ui-debug-agent-mcp.git"
+    "url": "git+https://github.com/samihalawa/visual-ui-debug-agent-mcp.git"
+  },
+  "homepage": "https://github.com/samihalawa/visual-ui-debug-agent-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/samihalawa/visual-ui-debug-agent-mcp/issues"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.24.0",
-    "axios": "^1.13.0",
-    "jimp": "^0.22.12",
-    "node-fetch": "^3.3.2",
-    "playwright": "^1.57.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "jimp": "^1.6.1",
+    "playwright": "^1.62.1",
     "zod": "^3.25.0"
   },
   "devDependencies": {
-    "@types/node": "^20.19.0",
-    "@types/node-fetch": "^2.6.13",
-    "concurrently": "^9.1.2",
+    "@types/node": "^20.19.43",
     "shx": "^0.3.4",
     "typescript": "^5.9.0"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "keywords": [
     "vuda",
@@ -70,7 +59,6 @@
     "automation",
     "playwright",
     "glama",
-    "smithery",
     "ui-testing",
     "visual-testing",
     "autonomous",
@@ -81,6 +69,6 @@
     "claude",
     "anthropic"
   ],
-  "author": "samihalawa",
+  "author": "Sami Halawa",
   "license": "ISC"
 }

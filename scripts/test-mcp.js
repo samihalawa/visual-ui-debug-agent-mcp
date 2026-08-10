@@ -1,116 +1,183 @@
 #!/usr/bin/env node
 
-// MCP AI Vision Debug UI Automation - Test Script
-import fetch from 'node-fetch';
+import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
-// Configuration
-const MCP_SERVER_URL = process.env.MCP_SERVER_URL || 'http://localhost:8080';
-const TEST_URL = process.env.TEST_URL || 'https://example.com';
+const expectedTools = [
+  'api_endpoint_tester',
+  'batch_screenshot_urls',
+  'console_monitor',
+  'debug_memory',
+  'dom_inspector',
+  'enhanced_page_analyzer',
+  'navigation_flow_validator',
+  'performance_analysis',
+  'playwright_click',
+  'playwright_console_logs',
+  'playwright_drag',
+  'playwright_evaluate',
+  'playwright_fill',
+  'playwright_get_visible_html',
+  'playwright_get_visible_text',
+  'playwright_go_back',
+  'playwright_go_forward',
+  'playwright_hover',
+  'playwright_iframe_click',
+  'playwright_navigate',
+  'playwright_press_key',
+  'playwright_screenshot',
+  'playwright_select',
+  'screenshot_local_files',
+  'screenshot_url',
+  'sitemap_crawler',
+  'tunnel_helper',
+  'ui_workflow_validator',
+  'visual_comparison'
+];
 
-// Colors for console output
-const colors = {
-  reset: '\x1b[0m',
-  bright: '\x1b[1m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  red: '\x1b[31m',
-  blue: '\x1b[34m',
-  cyan: '\x1b[36m'
-};
+const client = new Client(
+  { name: 'vuda-smoke-test', version: '1.0.0' },
+  { capabilities: {} }
+);
 
-// Helper function to print colored output
-function log(message, color = 'reset') {
-  console.log(`${colors[color]}${message}${colors.reset}`);
+function startFixtureServer(label) {
+  const server = createServer((_request, response) => {
+    response.writeHead(200, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({ server: label }));
+  });
+
+  return new Promise(resolve => {
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      resolve({ server, url: `http://127.0.0.1:${address.port}` });
+    });
+  });
 }
 
-// Helper function to format JSON
-function formatJSON(json) {
-  return JSON.stringify(json, null, 2);
-}
+const fixtureA = await startFixtureServer('A');
+const fixtureB = await startFixtureServer('B');
 
-// Main test function
-async function runTests() {
-  log('🚀 MCP AI Vision Debug UI Automation - Test Runner', 'bright');
-  log('=====================================================', 'bright');
-  log(`🔗 MCP Server URL: ${MCP_SERVER_URL}`);
-  log(`🌐 Test URL: ${TEST_URL}`);
-  log('\n');
+const transport = new StdioClientTransport({
+  command: process.execPath,
+  args: ['dist/index.js'],
+  cwd: process.cwd(),
+  env: {
+    ...process.env,
+    VUDA_STABILITY_WAIT: '50',
+    VUDA_DEFAULT_TIMEOUT: '5000',
+    VUDA_NAVIGATION_TIMEOUT: '5000'
+  },
+  stderr: 'pipe'
+});
 
-  try {
-    // Test connection to server
-    log('📡 Testing connection to MCP server...', 'blue');
-    const healthCheck = await fetch(`${MCP_SERVER_URL}/health`).then(res => res.json()).catch(() => null);
-    
-    if (healthCheck && healthCheck.status === 'ok') {
-      log('✅ Connection successful!', 'green');
-    } else {
-      log('❌ Failed to connect to MCP server', 'red');
-      log('   Make sure the server is running at: ' + MCP_SERVER_URL, 'yellow');
-      process.exit(1);
-    }
+let stderr = '';
+transport.stderr?.on('data', chunk => {
+  stderr += chunk.toString();
+});
 
-    // Test MCP tools
-    log('\n📝 Testing MCP tools...', 'blue');
+try {
+  await client.connect(transport);
 
-    // Test screenshot_url tool
-    log('\n🔍 Testing screenshot_url tool...', 'cyan');
-    const screenshotParams = {
-      tool: 'screenshot_url',
-      parameters: {
-        url: TEST_URL,
-        fullPage: true
-      }
-    };
-    
-    const screenshotResult = await fetch(`${MCP_SERVER_URL}/mcp`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(screenshotParams)
-    }).then(res => res.json());
-    
-    if (screenshotResult && screenshotResult.result) {
-      log('✅ screenshot_url tool test successful!', 'green');
-      log(`   Screenshot data: ${screenshotResult.result.substring(0, 50)}...`, 'yellow');
-    } else {
-      log('❌ screenshot_url tool test failed', 'red');
-      log(`   Error: ${formatJSON(screenshotResult)}`, 'yellow');
-    }
+  const serverVersion = client.getServerVersion();
+  assert.equal(serverVersion?.name, 'ai-vision-debug');
 
-    // Test enhanced_page_analyzer tool
-    log('\n🔍 Testing enhanced_page_analyzer tool...', 'cyan');
-    const analyzerParams = {
-      tool: 'enhanced_page_analyzer',
-      parameters: {
-        url: TEST_URL,
-        includeConsole: true,
-        mapElements: true
-      }
-    };
-    
-    const analyzerResult = await fetch(`${MCP_SERVER_URL}/mcp`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(analyzerParams)
-    }).then(res => res.json());
-    
-    if (analyzerResult && analyzerResult.result) {
-      log('✅ enhanced_page_analyzer tool test successful!', 'green');
-      log(`   Found ${analyzerResult.result.interactiveElements?.length || 0} interactive elements`, 'yellow');
-    } else {
-      log('❌ enhanced_page_analyzer tool test failed', 'red');
-      log(`   Error: ${formatJSON(analyzerResult)}`, 'yellow');
-    }
+  const { tools } = await client.listTools();
+  const actualTools = tools.map(tool => tool.name).sort();
+  assert.equal(new Set(actualTools).size, actualTools.length, 'tool names must be unique');
+  assert.deepEqual(actualTools, expectedTools);
 
-    log('\n🎉 All tests completed!', 'green');
-  } catch (error) {
-    log(`\n❌ Test failed with error: ${error.message}`, 'red');
-    process.exit(1);
+  const { resources } = await client.listResources();
+  const promptUris = [
+    'prompt://visual-debugging',
+    'prompt://ui-debug',
+    'prompt://iterative-debug-loop'
+  ];
+  for (const uri of promptUris) {
+    assert.ok(resources.some(resource => resource.uri === uri), `${uri} must be listed`);
+    const prompt = await client.readResource({ uri });
+    assert.match(prompt.contents[0]?.text ?? '', /^# .+/);
   }
-}
 
-// Run the tests
-runTests();
+  await client.callTool({
+    name: 'debug_memory',
+    arguments: { action: 'save', key: 'smoke-test', value: 'working' }
+  });
+  const memory = await client.callTool({
+    name: 'debug_memory',
+    arguments: { action: 'retrieve', key: 'smoke-test' }
+  });
+  assert.match(memory.content[0]?.text ?? '', /"value": "working"/);
+
+  for (const fixture of [fixtureA, fixtureB]) {
+    const apiResult = await client.callTool({
+      name: 'api_endpoint_tester',
+      arguments: {
+        url: fixture.url,
+        endpoints: [{ path: '/', method: 'GET' }]
+      }
+    });
+    const responseText = apiResult.content.map(item => item.text ?? '').join('\n');
+    assert.match(responseText, new RegExp(`"server": "${fixture === fixtureA ? 'A' : 'B'}"`));
+  }
+
+  const screenshot = await client.callTool({
+    name: 'screenshot_url',
+    arguments: {
+      url: 'data:text/html,<main><h1>VUDA smoke test</h1></main>',
+      fullPage: true
+    }
+  });
+  assert.equal(screenshot.isError, undefined);
+  assert.ok(
+    screenshot.content.some(item => item.type === 'image' && item.mimeType === 'image/png' && item.data.length > 100),
+    'screenshot tool must return a PNG image'
+  );
+
+  const analysis = await client.callTool({
+    name: 'enhanced_page_analyzer',
+    arguments: {
+      url: 'data:text/html,<button id="save">Save</button>',
+      includeConsole: true,
+      mapElements: true
+    }
+  });
+  assert.equal(analysis.isError, undefined);
+  assert.ok(
+    analysis.content.some(item => item.type === 'image' && item.data.length > 100),
+    'page analyzer must return image evidence'
+  );
+
+  const comparison = await client.callTool({
+    name: 'visual_comparison',
+    arguments: {
+      url1: 'data:text/html,<main style="color:red">Before</main>',
+      url2: 'data:text/html,<main style="color:blue">After</main>'
+    }
+  });
+  assert.equal(comparison.isError, undefined);
+  assert.ok(
+    comparison.content.some(item => item.type === 'image' && item.data.length > 100),
+    'visual comparison must return image evidence'
+  );
+
+  console.log(`PASS MCP handshake: ${serverVersion.name}@${serverVersion.version}`);
+  console.log(`PASS tool inventory: ${actualTools.length} unique tools`);
+  console.log(`PASS resource reads: ${promptUris.length} prompts`);
+  console.log('PASS tool call: debug_memory save/retrieve');
+  console.log('PASS API calls: independent base URLs');
+  console.log('PASS browser call: screenshot_url returned PNG');
+  console.log('PASS analyzer call: interactive-element annotation');
+  console.log('PASS comparison call: visual diff image');
+} catch (error) {
+  if (stderr.trim()) {
+    console.error(stderr.trim());
+  }
+  console.error(error);
+  process.exitCode = 1;
+} finally {
+  await client.close();
+  fixtureA.server.close();
+  fixtureB.server.close();
+}

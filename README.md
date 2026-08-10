@@ -1,107 +1,51 @@
 <p align="center">
-  <img src="publicresources/vuda-banner.svg" alt="VUDA - Visual UI Debug Agent" width="100%">
+  <img src="publicresources/vuda-banner.svg" alt="VUDA — Visual UI Debug Agent" width="100%">
 </p>
 
 <p align="center">
+  <a href="https://github.com/samihalawa/visual-ui-debug-agent-mcp/actions/workflows/build-and-test.yml"><img src="https://img.shields.io/github/actions/workflow/status/samihalawa/visual-ui-debug-agent-mcp/build-and-test.yml?branch=main&style=flat-square" alt="Build status"></a>
   <a href="https://www.npmjs.com/package/visual-ui-debug-agent-mcp"><img src="https://img.shields.io/npm/v/visual-ui-debug-agent-mcp.svg?style=flat-square&color=58a6ff" alt="npm version"></a>
   <a href="https://www.npmjs.com/package/visual-ui-debug-agent-mcp"><img src="https://img.shields.io/npm/dm/visual-ui-debug-agent-mcp.svg?style=flat-square&color=3fb950" alt="npm downloads"></a>
   <a href="https://github.com/samihalawa/visual-ui-debug-agent-mcp/stargazers"><img src="https://img.shields.io/github/stars/samihalawa/visual-ui-debug-agent-mcp?style=flat-square&color=f0883e" alt="GitHub stars"></a>
-  <a href="https://github.com/samihalawa/visual-ui-debug-agent-mcp/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/visual-ui-debug-agent-mcp.svg?style=flat-square&color=a371f7" alt="License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/npm/l/visual-ui-debug-agent-mcp.svg?style=flat-square&color=a371f7" alt="ISC license"></a>
 </p>
 
 <p align="center">
-  <b>Autonomous MCP Server for AI-Powered Visual UI Testing & Debugging</b><br>
-  <sub>30 powerful tools for screenshots, workflows, performance, and visual analysis</sub>
+  <strong>Give an MCP-compatible AI client a browser, screenshots, DOM inspection, workflow validation, console capture, API checks, and visual comparison.</strong><br>
+  <sub>Actively maintained · August 2026 · 29 MCP tools · Node.js 20+</sub>
 </p>
 
----
+## What VUDA does
 
-## What is VUDA?
+VUDA (Visual UI Debug Agent) is a local [Model Context Protocol](https://modelcontextprotocol.io/) server for inspecting and testing web interfaces with Playwright. It runs over standard input/output, so it works with MCP clients that can launch local commands.
 
-**VUDA (Visual UI Debug Agent)** is an MCP (Model Context Protocol) server that gives AI models the power to visually analyze, test, and debug web interfaces using Playwright. It enables any AI - even those without built-in vision - to inspect web pages, find UI bugs, test user workflows, and measure performance autonomously.
+- Capture full-page, viewport, element, local-file, and batch screenshots.
+- Map interactive elements and inspect rendered DOM and computed styles.
+- Execute multi-step UI workflows while preserving browser state.
+- Monitor console output and analyze page performance.
+- Compare two rendered states and return a visual diff.
+- Crawl sitemaps and exercise API endpoints.
+- Emulate supported Playwright devices.
 
 <p align="center">
-  <img src="publicresources/features.svg" alt="VUDA Features" width="100%">
+  <img src="publicresources/workflow-validation-demo.jpeg" alt="VUDA validating a browser workflow" width="88%">
 </p>
 
-### Key Capabilities
+## Quick start
 
-- **Visual Analysis** - Capture screenshots, analyze page structure, map interactive elements
-- **Workflow Testing** - Automatically test user journeys with step-by-step validation
-- **Performance Monitoring** - Measure load times, analyze metrics, identify bottlenecks
-- **API Testing** - Validate backend endpoints and responses
-- **Visual Comparison** - Detect UI changes between versions with diff highlighting
-- **Console Monitoring** - Capture errors, warnings, and logs in real-time
-
----
-
-## See It In Action
-
-<p align="center">
-  <img src="publicresources/link-checker-demo.jpeg" alt="VUDA Link Checker in Claude Desktop" width="100%">
-</p>
-
-<p align="center">
-  <i>Claude Desktop using VUDA to check links and find broken pages</i>
-</p>
-
-<p align="center">
-  <img src="publicresources/workflow-validation-demo.jpeg" alt="VUDA Workflow Validation" width="100%">
-</p>
-
-<p align="center">
-  <i>Validating user registration flow with step-by-step screenshots</i>
-</p>
-
-<p align="center">
-  <img src="publicresources/screenshot-demo.jpeg" alt="VUDA Screenshot Tool" width="100%">
-</p>
-
-<p align="center">
-  <i>Taking screenshots via Puppeteer MCP integration</i>
-</p>
-
----
-
-## Architecture
-
-<p align="center">
-  <img src="publicresources/architecture-diagram.jpeg" alt="VUDA Architecture" width="100%">
-</p>
-
-<p align="center">
-  <img src="publicresources/mcp-flow-diagram.jpeg" alt="MCP Tool Request Flow" width="100%">
-</p>
-
-VUDA acts as a bridge between AI models and web browsers through the MCP protocol. It uses Playwright for reliable cross-browser automation and provides structured data that any AI can understand.
-
----
-
-## Automated Testing Workflow
-
-<p align="center">
-  <img src="publicresources/automation-workflow.svg" alt="VUDA Automated Testing Workflow" width="100%">
-</p>
-
-One command triggers a comprehensive site analysis - crawl all pages, screenshot everything, validate user flows, and measure performance in seconds.
-
----
-
-## Quick Start
-
-### Installation
+### 1. Run VUDA
 
 ```bash
-# Install globally via npm
-npm install -g visual-ui-debug-agent-mcp
-
-# Or run directly with npx (no installation needed)
-npx visual-ui-debug-agent-mcp
+npx -y visual-ui-debug-agent-mcp
 ```
 
-### Configure with Claude Desktop
+Playwright needs a Chromium-compatible browser. If one is not already available, install the matching browser once:
 
-Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+```bash
+npx playwright install chromium
+```
+
+### 2. Add it to an MCP client
 
 ```json
 {
@@ -114,201 +58,121 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 }
 ```
 
-### Configure with Other MCP Clients
+Restart the client after changing its MCP configuration. The server writes protocol messages to stdout and diagnostics to its temporary log file.
+
+Docker users can use the same stdio transport:
 
 ```json
 {
   "mcpServers": {
     "vuda": {
-      "command": "node",
-      "args": ["/path/to/visual-ui-debug-agent-mcp/dist/index.js"]
+      "command": "docker",
+      "args": ["run", "--interactive", "--rm", "ghcr.io/samihalawa/visual-ui-debug-agent-mcp:latest"]
     }
   }
 }
 ```
 
----
+### 3. Try it
 
-## Complete Tool Reference (30 Tools)
+Ask your client to:
 
-### Visual Analysis Tools
-
-| Tool | Description |
-|------|-------------|
-| `enhanced_page_analyzer` | Comprehensive page analysis with element mapping, performance metrics, and console logs |
-| `screenshot_url` | Capture high-quality screenshots of any URL with device emulation |
-| `batch_screenshot_urls` | Screenshot multiple URLs in a single operation |
-| `screenshot_local_files` | Capture screenshots of local HTML files |
-| `visual_comparison` | Compare two pages/states and highlight visual differences |
-| `dom_inspector` | Inspect DOM elements with computed styles and properties |
-
-### Workflow & Testing Tools
-
-| Tool | Description |
-|------|-------------|
-| `ui_workflow_validator` | Test complete user journeys with step-by-step validation |
-| `navigation_flow_validator` | Validate multi-step navigation sequences |
-| `api_endpoint_tester` | Test API endpoints with authentication support |
-
-### Performance & Monitoring Tools
-
-| Tool | Description |
-|------|-------------|
-| `performance_analysis` | Measure page load performance and Core Web Vitals |
-| `console_monitor` | Monitor and capture console logs, errors, and warnings |
-| `sitemap_crawler` | Crawl sitemaps and analyze page structure |
-
-### Playwright Direct Controls
-
-| Tool | Description |
-|------|-------------|
-| `playwright_navigate` | Navigate to URLs |
-| `playwright_click` | Click on elements |
-| `playwright_iframe_click` | Click elements inside iframes |
-| `playwright_fill` | Fill form fields |
-| `playwright_select` | Select dropdown options |
-| `playwright_hover` | Hover over elements |
-| `playwright_evaluate` | Execute JavaScript in page context |
-| `playwright_console_logs` | Get console output |
-| `playwright_get_visible_text` | Extract visible text content |
-| `playwright_get_visible_html` | Get rendered HTML |
-| `playwright_go_back` | Navigate back |
-| `playwright_go_forward` | Navigate forward |
-| `playwright_press_key` | Press keyboard keys |
-| `playwright_drag` | Drag and drop elements |
-| `playwright_screenshot` | Take custom screenshots |
-
-### Utility Tools
-
-| Tool | Description |
-|------|-------------|
-| `tunnel_helper` | Guide and manage Cloudflare tunnel setup for remote debugging |
-| `debug_memory` | Save and retrieve debugging context across sessions |
-
----
-
-## Usage Examples
-
-### Take a Screenshot
-
-```
-Ask Claude: "Take a screenshot of https://example.com"
+```text
+Use VUDA to inspect https://example.com, capture a screenshot, list the
+interactive elements, and report console errors and obvious layout issues.
 ```
 
-The AI will use `screenshot_url` to capture the page and return the image.
+## Tool reference
 
-### Analyze a Page
+### Analysis and capture
 
+| Tool | Purpose |
+| --- | --- |
+| `enhanced_page_analyzer` | Screenshot, console, performance, and interactive-element analysis |
+| `screenshot_url` | Capture a URL, viewport, full page, or selected element |
+| `batch_screenshot_urls` | Capture multiple URLs for side-by-side review |
+| `screenshot_local_files` | Render and capture local HTML files |
+| `dom_inspector` | Return element properties, children, and computed styles |
+| `visual_comparison` | Compare two rendered pages or elements |
+
+### Workflows, diagnostics, and APIs
+
+| Tool | Purpose |
+| --- | --- |
+| `ui_workflow_validator` | Execute and verify a described user journey |
+| `navigation_flow_validator` | Validate a sequence of browser actions |
+| `console_monitor` | Capture browser console messages over a time window |
+| `performance_analysis` | Collect navigation and page performance metrics |
+| `api_endpoint_tester` | Exercise multiple HTTP endpoints |
+| `sitemap_crawler` | Discover and inspect pages from a sitemap |
+| `tunnel_helper` | Store or retrieve a remote tunnel URL and setup guidance |
+| `debug_memory` | Keep small debugging notes during one server session |
+
+### Direct Playwright controls
+
+`playwright_navigate`, `playwright_click`, `playwright_iframe_click`, `playwright_fill`, `playwright_select`, `playwright_hover`, `playwright_evaluate`, `playwright_console_logs`, `playwright_get_visible_text`, `playwright_get_visible_html`, `playwright_go_back`, `playwright_go_forward`, `playwright_press_key`, `playwright_drag`, and `playwright_screenshot`.
+
+## Configuration
+
+All settings are optional environment variables:
+
+| Variable | Default | Purpose |
+| --- | ---: | --- |
+| `VUDA_DEFAULT_TIMEOUT` | `15000` | General Playwright timeout in milliseconds |
+| `VUDA_NAVIGATION_TIMEOUT` | `15000` | Navigation timeout |
+| `VUDA_SELECTOR_TIMEOUT` | `12000` | Selector wait timeout |
+| `VUDA_STABILITY_WAIT` | `5000` | Delay after navigation before capture |
+| `VUDA_UI_UPDATE_WAIT` | `1000` | Delay for short UI updates |
+| `VUDA_PERFORMANCE_THRESHOLD` | `15000` | Slow-page threshold |
+| `VUDA_INTERACTION_DELAY` | `500` | Delay between direct interactions |
+
+Example:
+
+```json
+{
+  "mcpServers": {
+    "vuda": {
+      "command": "npx",
+      "args": ["-y", "visual-ui-debug-agent-mcp"],
+      "env": {
+        "VUDA_NAVIGATION_TIMEOUT": "30000",
+        "VUDA_STABILITY_WAIT": "2000"
+      }
+    }
+  }
+}
 ```
-Ask Claude: "Analyze the UI of https://myapp.com/dashboard and find any issues"
-```
 
-VUDA will use `enhanced_page_analyzer` to map all elements, check console for errors, and report findings.
-
-### Test a Login Flow
-
-```
-Ask Claude: "Test the login flow on https://myapp.com - use test@example.com and password123"
-```
-
-The AI will use `ui_workflow_validator` to:
-1. Navigate to the login page
-2. Fill in credentials
-3. Click submit
-4. Verify successful login
-5. Capture screenshots at each step
-
-### Compare Two Versions
-
-```
-Ask Claude: "Compare the homepage before and after our CSS update"
-```
-
-Using `visual_comparison`, VUDA will highlight all visual differences between the two states.
-
-### Monitor Performance
-
-```
-Ask Claude: "Check the performance of our checkout page"
-```
-
-`performance_analysis` will measure load times, analyze Core Web Vitals, and identify bottlenecks.
-
----
-
-## Advanced Configuration
-
-### Environment Variables
+## Development
 
 ```bash
-# Set browser options
-PLAYWRIGHT_HEADLESS=true
-PLAYWRIGHT_SLOW_MO=100
-
-# Debug mode
-DEBUG=vuda:*
+git clone https://github.com/samihalawa/visual-ui-debug-agent-mcp.git
+cd visual-ui-debug-agent-mcp
+npm ci
+npm test
 ```
 
-### Programmatic Usage
+`npm test` builds the TypeScript server, starts it through the MCP stdio transport, verifies the exact 29-tool inventory, reads a bundled resource, exercises a stateful tool call, and captures a real browser screenshot.
 
-```typescript
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+Before opening a pull request, also run:
 
-// VUDA exposes all tools through the MCP protocol
-const result = await client.callTool("enhanced_page_analyzer", {
-  url: "https://example.com",
-  includeConsole: true,
-  mapElements: true,
-  fullPage: true
-});
+```bash
+npm audit
+npm pack --dry-run
 ```
 
----
-
-## Why VUDA?
+## Architecture
 
 <p align="center">
-  <img src="publicresources/before-after-mockup.svg" alt="VUDA Before and After Comparison" width="100%">
+  <img src="publicresources/architecture.svg" alt="VUDA architecture" width="90%">
 </p>
 
-| Feature | VUDA | Other Solutions |
-|---------|------|-----------------|
-| **MCP Native** | Built for AI integration | Often REST-only |
-| **30 Specialized Tools** | Comprehensive coverage | Limited toolsets |
-| **Vision for Any AI** | Works without built-in vision | Requires vision models |
-| **Autonomous Testing** | AI-driven workflows | Manual scripting |
-| **Cross-Browser** | Playwright-powered | Single browser |
-| **Zero Config** | Works out of the box | Complex setup |
-
----
-
-## Requirements
-
-- **Node.js** 18 or higher
-- **npm** or **npx**
-- Works on macOS, Linux, and Windows
-
----
+VUDA keeps one interactive Playwright page for direct controls, creates isolated contexts for page-level analyses, returns screenshots as MCP image content, and exposes generated screenshots and debugging prompts as MCP resources.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
+Issues and focused pull requests are welcome. Include a clear reproduction, the expected behavior, and the `npm test` output for behavioral changes.
 
 ## License
 
-This project is licensed under the [ISC License](LICENSE).
-
----
-
-<p align="center">
-  <sub>Built with Playwright and the Model Context Protocol</sub><br>
-  <sub>Made by <a href="https://github.com/samihalawa">@samihalawa</a></sub>
-</p>
+[ISC](LICENSE) © 2023–2026 Sami Halawa and contributors.

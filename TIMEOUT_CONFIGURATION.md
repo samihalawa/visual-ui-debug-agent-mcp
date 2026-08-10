@@ -21,10 +21,6 @@ You can customize timeout behavior by setting these environment variables:
 - `VUDA_PERFORMANCE_THRESHOLD` - Performance monitoring threshold (default: 15000ms)
 - `VUDA_INTERACTION_DELAY` - Delay between interactions (default: 500ms)
 
-### Flow Testing
-- `VUDA_FLOW_STEP_DELAY` - Delay between flow steps (default: 1000ms)
-- `VUDA_ACTION_WAIT_BEFORE` - Wait before actions in flows (default: 2000ms)
-
 ## Usage Examples
 
 ### Basic Usage (Default Values)

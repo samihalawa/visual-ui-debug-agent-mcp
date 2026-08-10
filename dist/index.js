@@ -7,11 +7,13 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 import { randomUUID } from 'crypto';
+import { fileURLToPath } from 'url';
 import { z } from 'zod';
 import { chromium, devices, request } from 'playwright';
-import Jimp from 'jimp';
+import { Jimp, JimpMime, diff, intToRGBA, loadFont } from 'jimp';
+import { SANS_16_WHITE } from 'jimp/fonts';
 let TEMP_DIR = path.join(os.tmpdir(), 'ai-vision-debug');
-const DOWNLOADS_DIR = path.join(os.homedir(), 'Downloads');
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 // Configurable timeout settings for better flexibility
 const TIMEOUT_CONFIG = {
     // Default page and navigation timeouts (increased from 4000ms to 15000ms)
@@ -59,111 +61,18 @@ function logToFile(message) {
         console.error(`Failed to write to log file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
-// Simple UUID generator
-function generateUuid() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-}
 // Initialize debug session
 const debugSession = {
     currentUrl: null,
     lastScreenshotPath: null,
     debugHistory: []
 };
-// Browser Manager for proper resource cleanup
-class BrowserManager {
-    browser = null;
-    contexts = new Set();
-    pages = new Set();
-    apiContext = null;
-    async getBrowser() {
-        if (!this.browser) {
-            const { chromium } = await import('playwright');
-            this.browser = await chromium.launch({ headless: true });
-        }
-        return this.browser;
-    }
-    async getContext() {
-        const browser = await this.getBrowser();
-        const context = await browser.newContext();
-        this.contexts.add(context);
-        return context;
-    }
-    async getPage() {
-        const context = await this.getContext();
-        const page = await context.newPage();
-        this.pages.add(page);
-        return page;
-    }
-    async cleanup() {
-        // Close all pages
-        for (const page of this.pages) {
-            try {
-                await page.close();
-            }
-            catch (error) {
-                console.error('Error closing page:', error);
-            }
-        }
-        this.pages.clear();
-        // Close all contexts
-        for (const context of this.contexts) {
-            try {
-                await context.close();
-            }
-            catch (error) {
-                console.error('Error closing context:', error);
-            }
-        }
-        this.contexts.clear();
-        // Close browser
-        if (this.browser) {
-            try {
-                await this.browser.close();
-            }
-            catch (error) {
-                console.error('Error closing browser:', error);
-            }
-            this.browser = null;
-        }
-        // Close API context
-        if (this.apiContext) {
-            try {
-                await this.apiContext.dispose();
-            }
-            catch (error) {
-                console.error('Error disposing API context:', error);
-            }
-            this.apiContext = null;
-        }
-    }
-}
-// Global browser manager instance
-const browserManager = new BrowserManager();
-// Add cleanup handlers
-process.on('SIGTERM', async () => {
-    console.log('Received SIGTERM, cleaning up...');
-    await browserManager.cleanup();
-    process.exit(0);
-});
-process.on('SIGINT', async () => {
-    console.log('Received SIGINT, cleaning up...');
-    await browserManager.cleanup();
-    process.exit(0);
-});
-process.on('uncaughtException', async (error) => {
-    console.error('Uncaught exception:', error);
-    await browserManager.cleanup();
-    process.exit(1);
-});
-// Legacy compatibility - these will be removed in tool implementations
+// Shared browser state for tools that build on the same interactive page.
 let browserInstance = null;
 let browserContext = null;
 let activePage = null;
 let apiContext = null;
+let apiContextBaseUrl;
 // Store console logs and screenshots for resource access
 const consoleLogs = [];
 const screenshots = new Map();
@@ -182,8 +91,8 @@ async function splitLargeImage(base64Data, maxDimension = 7500) {
         const imageBuffer = Buffer.from(base64Data, 'base64');
         // Load image with Jimp
         const image = await Jimp.read(imageBuffer);
-        const originalWidth = image.getWidth();
-        const originalHeight = image.getHeight();
+        const originalWidth = image.width;
+        const originalHeight = image.height;
         // Check if image needs splitting
         if (originalWidth <= maxDimension && originalHeight <= maxDimension) {
             return {
@@ -216,9 +125,14 @@ async function splitLargeImage(base64Data, maxDimension = 7500) {
                 const chunkWidth = Math.min(maxDimension, originalWidth - offsetX);
                 const chunkHeight = Math.min(maxDimension, originalHeight - offsetY);
                 // Create chunk by cropping the original image
-                const chunk = image.clone().crop(offsetX, offsetY, chunkWidth, chunkHeight);
+                const chunk = image.clone().crop({
+                    x: offsetX,
+                    y: offsetY,
+                    w: chunkWidth,
+                    h: chunkHeight
+                });
                 // Convert chunk to base64
-                const chunkBuffer = await chunk.getBufferAsync(Jimp.MIME_PNG);
+                const chunkBuffer = await chunk.getBuffer(JimpMime.png);
                 const chunkBase64 = chunkBuffer.toString('base64');
                 chunks.push({
                     base64Data: chunkBase64,
@@ -260,103 +174,6 @@ async function splitLargeImage(base64Data, maxDimension = 7500) {
         };
     }
 }
-// Add schema for enhanced page analyzer
-const EnhancedPageAnalyzerSchema = z.object({
-    url: z.string().describe("URL to analyze (e.g., http://localhost:4999, https://example.com)"),
-    includeConsole: z.boolean().optional().default(true).describe("Whether to include console logs. Default: true"),
-    mapElements: z.boolean().optional().default(true).describe("Whether to map interactive elements. Default: true"),
-    fullPage: z.boolean().optional().default(false).describe("Whether to capture full page or just viewport. Default: false"),
-    waitForSelector: z.string().optional().describe("Optional CSS selector to wait for before analysis"),
-    device: z.string().optional().describe("Optional device to emulate (e.g., 'iPhone 13', 'Pixel 5')")
-});
-// Add schema for API endpoint tester
-const ApiEndpointTesterSchema = z.object({
-    url: z.string().describe("Base URL of the API (e.g., http://localhost:5000/api)"),
-    endpoints: z.array(z.object({
-        path: z.string().describe("Endpoint path (e.g., /users)"),
-        method: z.enum(["GET", "POST", "PUT", "DELETE", "PATCH"]).describe("HTTP method"),
-        data: z.any().optional().describe("Request body data for POST/PUT"),
-        headers: z.record(z.string()).optional().describe("Request headers")
-    })).describe("List of endpoints to test"),
-    authToken: z.string().optional().describe("Optional auth token to include in all requests")
-});
-// Add schema for navigation flow validator
-const NavigationFlowValidatorSchema = z.object({
-    startUrl: z.string().describe("URL to start the navigation flow from"),
-    steps: z.array(z.object({
-        action: z.enum(["click", "fill", "select", "hover", "wait", "navigate", "evaluate"]).describe("Action to perform"),
-        selector: z.string().optional().describe("CSS selector for the element to interact with"),
-        value: z.string().optional().describe("Value to input (for fill or select action)"),
-        url: z.string().optional().describe("URL to navigate to (for navigate action)"),
-        script: z.string().optional().describe("JavaScript to evaluate (for evaluate action)")
-    })).describe("Sequence of steps to perform"),
-    captureScreenshots: z.boolean().optional().default(true).describe("Whether to capture screenshots after each step. Default: true"),
-    includeConsole: z.boolean().optional().default(true).describe("Whether to include console logs. Default: true"),
-    device: z.string().optional().describe("Optional device to emulate (e.g., 'iPhone 13', 'Pixel 5')")
-});
-// Add schema for screenshot URL
-const ScreenshotUrlSchema = z.object({
-    url: z.string().describe("URL to capture a screenshot of (e.g., http://localhost:4999, https://example.com)"),
-    fullPage: z.boolean().optional().default(false).describe("Whether to capture full page or just viewport. Default: false"),
-    selector: z.string().optional().describe("Optional CSS selector to screenshot only that element"),
-    waitForSelector: z.string().optional().describe("Optional CSS selector to wait for before taking screenshot"),
-    device: z.string().optional().describe("Optional device to emulate (e.g., 'iPhone 13', 'Pixel 5')")
-});
-// Add schema for DOM inspection
-const DomInspectorSchema = z.object({
-    url: z.string().describe("URL to inspect (e.g., http://localhost:4999, https://example.com)"),
-    selector: z.string().describe("CSS selector to inspect"),
-    includeChildren: z.boolean().optional().default(false).describe("Whether to include children elements. Default: false"),
-    includeStyles: z.boolean().optional().default(true).describe("Whether to include computed styles. Default: true")
-});
-// Add schema for console monitor
-const ConsoleMonitorSchema = z.object({
-    url: z.string().describe("URL to monitor console logs from"),
-    filterTypes: z.array(z.enum(["log", "info", "warning", "error"])).optional().describe("Types of console messages to capture"),
-    duration: z.number().optional().describe("How long to monitor in milliseconds. Default: 5000 (configurable via VUDA_STABILITY_WAIT)"),
-    interactionSelector: z.string().optional().describe("Optional element to click before monitoring")
-});
-// Add schema for accessibility check
-const AccessibilityCheckSchema = z.object({
-    url: z.string().describe("URL to check for accessibility issues"),
-    standard: z.enum(["WCAG2A", "WCAG2AA", "WCAG2AAA"]).optional().describe("Accessibility standard to check against. Default: WCAG2AA"),
-    includeScreenshot: z.boolean().optional().describe("Whether to include a screenshot with issues highlighted. Default: true")
-});
-// Add schema for performance analysis
-const PerformanceAnalysisSchema = z.object({
-    url: z.string().describe("URL to analyze performance for"),
-    iterations: z.number().optional().describe("Number of test iterations to run. Default: 1"),
-    waitForNetworkIdle: z.boolean().optional().describe("Whether to wait for network to be idle. Default: true"),
-    device: z.string().optional().describe("Optional device to emulate (e.g., 'iPhone 13', 'Pixel 5')")
-});
-// Add schema for visual comparison
-const VisualComparisonSchema = z.object({
-    url1: z.string().describe("First URL to compare"),
-    url2: z.string().describe("Second URL to compare"),
-    threshold: z.number().optional().describe("Difference threshold (0.0-1.0). Default: 0.1"),
-    fullPage: z.boolean().optional().describe("Whether to capture full page. Default: false"),
-    selector: z.string().optional().describe("Optional CSS selector to limit comparison")
-});
-// <<< START INSERTION: UI Workflow Validator Schema >>>
-const UIWorkflowValidatorSchema = z.object({
-    startUrl: z.string().url().describe("Initial URL for the workflow"),
-    taskDescription: z.string().describe("High-level description of the user task being simulated"),
-    steps: z.array(z.object({
-        description: z.string().describe("Description of the user action for this step"),
-        action: z.enum([
-            "navigate", "click", "fill", "select", "hover", "wait", "evaluate", "screenshot",
-            "verifyText", "verifyElementVisible", "verifyElementNotVisible", "verifyUrl"
-        ]).describe("Playwright action or verification to perform"),
-        selector: z.string().optional().describe("CSS selector for interaction or verification"),
-        value: z.string().optional().describe("Value for fill/select or text/URL to verify"),
-        url: z.string().optional().describe("URL for navigate action or verification"),
-        script: z.string().optional().describe("JavaScript for evaluate action"),
-        isOptional: z.boolean().optional().default(false).describe("If true, failure of this step won't stop the workflow")
-    })).min(1).describe("Sequence of steps representing the user workflow (minimum 1 step)"),
-    captureScreenshots: z.enum(["all", "failure", "none"]).optional().default("failure").describe("When to capture screenshots"),
-    device: z.string().optional().describe("Optional device to emulate (e.g., 'iPhone 13', 'Pixel 5')")
-});
-// <<< END INSERTION: UI Workflow Validator Schema >>>
 // Add schema for tunnel helper
 const TunnelHelperSchema = z.object({
     localPort: z.number().describe("Local port number to expose (e.g., 3000, 8080)"),
@@ -392,10 +209,12 @@ class AIVisionDebugServer {
         });
         this.setupRequestHandlers();
         this.server.onerror = (error) => logToFile(`[MCP Error] ${error}`);
-        process.on('SIGINT', async () => {
-            await this.cleanup();
-            process.exit(0);
-        });
+        for (const signal of ['SIGINT', 'SIGTERM']) {
+            process.on(signal, async () => {
+                await this.cleanup();
+                process.exit(0);
+            });
+        }
     }
     async cleanup() {
         try {
@@ -414,6 +233,7 @@ class AIVisionDebugServer {
             if (apiContext) {
                 await apiContext.dispose().catch(() => { });
                 apiContext = null;
+                apiContextBaseUrl = undefined;
             }
             await this.server.close();
         }
@@ -428,9 +248,13 @@ class AIVisionDebugServer {
         try {
             if (!browserInstance) {
                 logToFile('Initializing browser...');
-                browserInstance = await chromium.launch({
-                    headless: true
-                });
+                try {
+                    browserInstance = await chromium.launch({ headless: true });
+                }
+                catch (error) {
+                    logToFile(`Bundled Chromium unavailable, trying installed Chrome: ${error}`);
+                    browserInstance = await chromium.launch({ headless: true, channel: 'chrome' });
+                }
             }
             // Always create a new context with the specified settings
             if (browserContext) {
@@ -474,12 +298,17 @@ class AIVisionDebugServer {
      */
     async ensureApiContext(baseUrl) {
         try {
+            if (apiContext && apiContextBaseUrl !== baseUrl) {
+                await apiContext.dispose();
+                apiContext = null;
+            }
             if (!apiContext) {
                 const options = {};
                 if (baseUrl) {
                     options.baseURL = baseUrl;
                 }
                 apiContext = await request.newContext(options);
+                apiContextBaseUrl = baseUrl;
             }
             return apiContext;
         }
@@ -755,42 +584,42 @@ class AIVisionDebugServer {
                 if (interactiveElements.length > 0) {
                     try {
                         const image = await Jimp.read(screenshotPath);
-                        const font = await Jimp.loadFont(Jimp.FONT_SANS_16_WHITE);
+                        const font = await loadFont(SANS_16_WHITE);
                         // Draw numbered boxes around interactive elements
                         for (const element of interactiveElements) {
                             const { x, y, width, height } = element.bounds;
                             // Draw rectangle
                             for (let i = 0; i < width; i++) {
-                                if (x + i < image.getWidth()) {
-                                    if (y < image.getHeight())
+                                if (x + i < image.width) {
+                                    if (y < image.height)
                                         image.setPixelColor(0xFF0000FF, x + i, y); // Top
-                                    if (y + height - 1 < image.getHeight())
+                                    if (y + height - 1 < image.height)
                                         image.setPixelColor(0xFF0000FF, x + i, y + height - 1); // Bottom
                                 }
                             }
                             for (let i = 0; i < height; i++) {
-                                if (y + i < image.getHeight()) {
-                                    if (x < image.getWidth())
+                                if (y + i < image.height) {
+                                    if (x < image.width)
                                         image.setPixelColor(0xFF0000FF, x, y + i); // Left
-                                    if (x + width - 1 < image.getWidth())
+                                    if (x + width - 1 < image.width)
                                         image.setPixelColor(0xFF0000FF, x + width - 1, y + i); // Right
                                 }
                             }
                             // Draw label background (small square)
                             for (let i = 0; i < 20; i++) {
                                 for (let j = 0; j < 20; j++) {
-                                    if (x + i < image.getWidth() && y + j < image.getHeight()) {
+                                    if (x + i < image.width && y + j < image.height) {
                                         image.setPixelColor(0xFF0000FF, x + i, y + j);
                                     }
                                 }
                             }
                             // Print element index
-                            if (x + 5 < image.getWidth() && y + 2 < image.getHeight()) {
-                                image.print(font, x + 5, y + 2, element.index.toString());
+                            if (x + 5 < image.width && y + 2 < image.height) {
+                                image.print({ font, x: x + 5, y: y + 2, text: element.index.toString() });
                             }
                         }
                         const annotatedPath = path.join(TEMP_DIR, `annotated_${fileUuid}.png`);
-                        await image.writeAsync(annotatedPath);
+                        await image.write(annotatedPath);
                         const annotatedBuffer = await fsPromises.readFile(annotatedPath);
                         annotatedScreenshot = {
                             path: annotatedPath,
@@ -973,7 +802,9 @@ class AIVisionDebugServer {
                         status: response.status(),
                         responseTime,
                         responseData,
-                        requestHeaders: headers,
+                        requestHeaders: authToken
+                            ? { ...headers, Authorization: '[REDACTED]' }
+                            : headers,
                         requestBody
                     });
                 }
@@ -1211,7 +1042,7 @@ class AIVisionDebugServer {
                             fullPage: true,
                             type: 'png'
                         });
-                        const gridFileUuid = generateUuid();
+                        const gridFileUuid = randomUUID();
                         gridImagePath = path.join(process.cwd(), `grid_screenshot_${gridFileUuid}.png`);
                         fs.writeFileSync(gridImagePath, gridScreenshot);
                         gridImageBase64 = gridScreenshot.toString('base64');
@@ -1661,15 +1492,15 @@ class AIVisionDebugServer {
             const image1 = await Jimp.read(screenshotPath1);
             const image2 = await Jimp.read(screenshotPath2);
             // Resize the second image to match the first if they're different sizes
-            if (image1.getWidth() !== image2.getWidth() || image1.getHeight() !== image2.getHeight()) {
-                image2.resize(image1.getWidth(), image1.getHeight());
+            if (image1.width !== image2.width || image1.height !== image2.height) {
+                image2.resize({ w: image1.width, h: image1.height });
             }
             // Compare images
-            const diff = Jimp.diff(image1, image2, threshold);
-            const diffPercentage = diff.percent;
+            const comparison = diff(image1, image2, threshold);
+            const diffPercentage = comparison.percent;
             // Save diff image
             const diffPath = path.join(TEMP_DIR, `diff_${fileUuid1}_${fileUuid2}.png`);
-            await diff.image.writeAsync(diffPath);
+            await comparison.image.write(diffPath);
             // Get base64 data of all images
             const buffer1 = await fsPromises.readFile(screenshotPath1);
             const buffer2 = await fsPromises.readFile(screenshotPath2);
@@ -1687,9 +1518,9 @@ class AIVisionDebugServer {
             // Find differences
             const differences = [];
             if (diffPercentage > 0) {
-                const diffImage = diff.image;
-                const width = diffImage.getWidth();
-                const height = diffImage.getHeight();
+                const diffImage = comparison.image;
+                const width = diffImage.width;
+                const height = diffImage.height;
                 // Find regions with differences
                 const visited = new Set();
                 for (let y = 0; y < height; y++) {
@@ -1697,7 +1528,7 @@ class AIVisionDebugServer {
                         const key = `${x},${y}`;
                         if (visited.has(key))
                             continue;
-                        const pixel = Jimp.intToRGBA(diffImage.getPixelColor(x, y));
+                        const pixel = intToRGBA(diffImage.getPixelColor(x, y));
                         // If pixel is red (diff marker)
                         if (pixel.r > 0 && pixel.g === 0 && pixel.b === 0) {
                             // Find the bounds of this difference region
@@ -1723,7 +1554,7 @@ class AIVisionDebugServer {
                                     const [nx, ny] = neighbor.split(',').map(Number);
                                     if ((nx === undefined) || (ny === undefined) || nx < 0 || nx >= width || ny < 0 || ny >= height)
                                         continue;
-                                    const nPixel = Jimp.intToRGBA(diffImage.getPixelColor(nx, ny));
+                                    const nPixel = intToRGBA(diffImage.getPixelColor(nx, ny));
                                     if (nPixel.r > 0 && nPixel.g === 0 && nPixel.b === 0) {
                                         toVisit.push(neighbor);
                                         visited.add(neighbor);
@@ -1824,13 +1655,13 @@ class AIVisionDebugServer {
                 try {
                     switch (promptName) {
                         case "visual-debugging":
-                            promptContent = await fsPromises.readFile(path.join(__dirname, "../prompts/visual-debugging.md"), "utf-8");
+                            promptContent = await fsPromises.readFile(path.join(MODULE_DIR, "../prompts/visual-debugging.md"), "utf-8");
                             break;
                         case "ui-debug":
-                            promptContent = await fsPromises.readFile(path.join(__dirname, "../src/prompt-templates/ui-debug-prompt.md"), "utf-8");
+                            promptContent = await fsPromises.readFile(path.join(MODULE_DIR, "../prompts/ui-debug-prompt.md"), "utf-8");
                             break;
                         case "iterative-debug-loop":
-                            promptContent = await fsPromises.readFile(path.join(__dirname, "../prompts/iterative-debug-loop.md"), "utf-8");
+                            promptContent = await fsPromises.readFile(path.join(MODULE_DIR, "../prompts/iterative-debug-loop.md"), "utf-8");
                             break;
                         default:
                             throw new Error(`Unknown prompt: ${promptName}`);
@@ -2162,42 +1993,6 @@ class AIVisionDebugServer {
                             }
                         },
                         required: ['url1', 'url2']
-                    }
-                },
-                {
-                    name: 'batch_screenshot_urls',
-                    description: 'Take screenshots of multiple URLs and display them in a grid',
-                    inputSchema: {
-                        type: 'object',
-                        properties: {
-                            urls: {
-                                type: 'array',
-                                items: {
-                                    type: 'string'
-                                },
-                                description: 'Array of URLs to capture screenshots of'
-                            },
-                            paths: {
-                                type: 'array',
-                                items: {
-                                    type: 'string'
-                                },
-                                description: 'Optional array of paths to label the screenshots with'
-                            },
-                            fullPage: {
-                                type: 'boolean',
-                                description: 'Whether to capture full page or just viewport. Default: false'
-                            },
-                            waitTime: {
-                                type: 'number',
-                                description: 'Time to wait in milliseconds before taking each screenshot. Default: 5000 (configurable via VUDA_STABILITY_WAIT)'
-                            },
-                            gridSize: {
-                                type: 'number',
-                                description: 'Size of grid (2 for 2x2, 4 for 4x4). Default: 2'
-                            }
-                        },
-                        required: ['urls']
                     }
                 },
                 {
