@@ -39,7 +39,7 @@
   "devDependencies": {
     "@types/node": "^20.19.43",
     "shx": "^0.4.0",
-    "typescript": "^5.9.0"
+    "typescript": "^7.0.2"
   },
   "engines": {
     "node": ">=20"
