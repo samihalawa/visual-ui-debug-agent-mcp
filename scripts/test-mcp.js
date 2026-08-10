@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
+import { readFileSync } from 'node:fs';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
@@ -36,6 +37,10 @@ const expectedTools = [
   'ui_workflow_validator',
   'visual_comparison'
 ];
+
+const packageVersion = JSON.parse(
+  readFileSync(new URL('../package.json', import.meta.url), 'utf8')
+).version;
 
 const client = new Client(
   { name: 'vuda-smoke-test', version: '1.0.0' },
@@ -81,7 +86,8 @@ try {
   await client.connect(transport);
 
   const serverVersion = client.getServerVersion();
-  assert.equal(serverVersion?.name, 'ai-vision-debug');
+  assert.equal(serverVersion?.name, 'vuda');
+  assert.equal(serverVersion?.version, packageVersion);
 
   const { tools } = await client.listTools();
   const actualTools = tools.map(tool => tool.name).sort();

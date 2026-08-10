@@ -1,6 +1,6 @@
 {
   "name": "visual-ui-debug-agent-mcp",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Visual UI testing and debugging tools for MCP clients, powered by Playwright",
   "main": "dist/index.js",
   "type": "module",
@@ -19,7 +19,8 @@
     "dev": "npm run build && npm start",
     "init-repo": "node scripts/init-repo.js",
     "watch": "tsc --watch",
-    "test": "npm run build && node scripts/test-mcp.js"
+    "check:assets": "node scripts/check-readme-assets.mjs",
+    "test": "npm run check:assets && npm run build && node scripts/test-mcp.js"
   },
   "repository": {
     "type": "git",
@@ -37,7 +38,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
-    "shx": "^0.3.4",
+    "shx": "^0.4.0",
     "typescript": "^5.9.0"
   },
   "engines": {

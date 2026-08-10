@@ -12,8 +12,9 @@ import { z } from 'zod';
 import { chromium, devices, request } from 'playwright';
 import { Jimp, JimpMime, diff, intToRGBA, loadFont } from 'jimp';
 import { SANS_16_WHITE } from 'jimp/fonts';
-let TEMP_DIR = path.join(os.tmpdir(), 'ai-vision-debug');
+let TEMP_DIR = path.join(os.tmpdir(), 'vuda');
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const packageVersion = JSON.parse(fs.readFileSync(path.resolve(MODULE_DIR, '../package.json'), 'utf8')).version;
 // Configurable timeout settings for better flexibility
 const TIMEOUT_CONFIG = {
     // Default page and navigation timeouts (increased from 4000ms to 15000ms)
@@ -31,7 +32,7 @@ const TIMEOUT_CONFIG = {
     INTERACTION_DELAY: parseInt(process.env.VUDA_INTERACTION_DELAY || '500'),
 };
 // Set up logging to a file instead of console
-const logDir = path.join(os.tmpdir(), 'ai-vision-debug-logs');
+const logDir = path.join(os.tmpdir(), 'vuda-logs');
 try {
     if (!fs.existsSync(logDir)) {
         fs.mkdirSync(logDir, { recursive: true });
@@ -43,7 +44,7 @@ try {
 catch (error) {
     console.error(`Failed to create directory: ${error instanceof Error ? error.message : 'Unknown error'}`);
     // Use fallback temporary directory
-    const fallbackDir = path.join(os.tmpdir(), 'fallback-debug');
+    const fallbackDir = path.join(os.tmpdir(), 'vuda-fallback');
     try {
         fs.mkdirSync(fallbackDir, { recursive: true });
         TEMP_DIR = fallbackDir;
@@ -52,7 +53,7 @@ catch (error) {
         throw new Error(`Critical: Cannot create any temp directories: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`);
     }
 }
-const logFile = path.join(logDir, 'ai-vision-debug.log');
+const logFile = path.join(logDir, 'vuda.log');
 function logToFile(message) {
     try {
         fs.appendFileSync(logFile, `${new Date().toISOString()} - ${message}\n`);
@@ -199,8 +200,8 @@ class AIVisionDebugServer {
     server;
     constructor() {
         this.server = new Server({
-            name: 'ai-vision-debug',
-            version: '1.0.2',
+            name: 'vuda',
+            version: packageVersion,
         }, {
             capabilities: {
                 resources: { listChanged: true },

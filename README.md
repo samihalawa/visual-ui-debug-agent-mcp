@@ -7,12 +7,13 @@
   <a href="https://www.npmjs.com/package/visual-ui-debug-agent-mcp"><img src="https://img.shields.io/npm/v/visual-ui-debug-agent-mcp.svg?style=flat-square&color=58a6ff" alt="npm version"></a>
   <a href="https://www.npmjs.com/package/visual-ui-debug-agent-mcp"><img src="https://img.shields.io/npm/dm/visual-ui-debug-agent-mcp.svg?style=flat-square&color=3fb950" alt="npm downloads"></a>
   <a href="https://github.com/samihalawa/visual-ui-debug-agent-mcp/stargazers"><img src="https://img.shields.io/github/stars/samihalawa/visual-ui-debug-agent-mcp?style=flat-square&color=f0883e" alt="GitHub stars"></a>
+  <a href="https://github.com/samihalawa/visual-ui-debug-agent-mcp/commits/main"><img src="https://img.shields.io/github/last-commit/samihalawa/visual-ui-debug-agent-mcp?style=flat-square&color=2ea043" alt="Last commit"></a>
   <a href="LICENSE"><img src="https://img.shields.io/npm/l/visual-ui-debug-agent-mcp.svg?style=flat-square&color=a371f7" alt="ISC license"></a>
 </p>
 
 <p align="center">
   <strong>Give an MCP-compatible AI client a browser, screenshots, DOM inspection, workflow validation, console capture, API checks, and visual comparison.</strong><br>
-  <sub>Actively maintained · August 2026 · 29 MCP tools · Node.js 20+</sub>
+  <sub>29 MCP tools · Node.js 20+ · TypeScript · Playwright</sub>
 </p>
 
 ## What VUDA does
@@ -28,7 +29,7 @@ VUDA (Visual UI Debug Agent) is a local [Model Context Protocol](https://modelco
 - Emulate supported Playwright devices.
 
 <p align="center">
-  <img src="publicresources/workflow-validation-demo.jpeg" alt="VUDA validating a browser workflow" width="88%">
+  <img src="publicresources/features.svg" alt="VUDA capabilities: screenshots, workflows, performance, API testing, and visual comparison" width="92%">
 </p>
 
 ## Quick start
@@ -171,7 +172,7 @@ VUDA keeps one interactive Playwright page for direct controls, creates isolated
 
 ## Contributing
 
-Issues and focused pull requests are welcome. Include a clear reproduction, the expected behavior, and the `npm test` output for behavioral changes.
+Issues and focused pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and review checklist. Release history is recorded in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

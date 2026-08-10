@@ -43,8 +43,8 @@
     <rect width="200" height="140" rx="8" fill="#21262d" stroke="#58a6ff" stroke-width="2"/>
     <text x="100" y="30" font-family="system-ui" font-size="16" fill="#58a6ff" text-anchor="middle" font-weight="700">VUDA Server</text>
     <line x1="20" y1="45" x2="180" y2="45" stroke="#30363d" stroke-width="1"/>
-    <text x="100" y="70" font-family="monospace" font-size="11" fill="#3fb950" text-anchor="middle">30 MCP Tools</text>
-    <text x="100" y="90" font-family="system-ui" font-size="10" fill="#8b949e" text-anchor="middle">• Screenshot & Analysis</text>
+    <text x="100" y="70" font-family="monospace" font-size="11" fill="#3fb950" text-anchor="middle">29 MCP Tools</text>
+    <text x="100" y="90" font-family="system-ui" font-size="10" fill="#8b949e" text-anchor="middle">• Screenshot &amp; Analysis</text>
     <text x="100" y="105" font-family="system-ui" font-size="10" fill="#8b949e" text-anchor="middle">• Workflow Validation</text>
     <text x="100" y="120" font-family="system-ui" font-size="10" fill="#8b949e" text-anchor="middle">• Performance Metrics</text>
   </g>
@@ -116,7 +116,7 @@
     </g>
     <g transform="translate(630, 55)">
       <rect x="0" y="0" width="100" height="24" rx="4" fill="#6e7681"/>
-      <text x="50" y="16" font-family="monospace" font-size="10" fill="white" text-anchor="middle">+22 more</text>
+      <text x="50" y="16" font-family="monospace" font-size="10" fill="white" text-anchor="middle">+20 more</text>
     </g>
   </g>
 </svg>

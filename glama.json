@@ -1,6 +1,6 @@
 {
   "name": "visual-ui-debug-agent-mcp",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Visual UI testing and debugging tools for MCP clients, powered by Playwright",
   "author": "samihalawa",
   "license": "ISC",

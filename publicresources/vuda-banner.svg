@@ -78,12 +78,12 @@
   <!-- Main title -->
   <text x="120" y="280" font-family="SF Pro Display, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="url(#accentGrad)">VUDA</text>
   <text x="120" y="320" font-family="SF Pro Display, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-size="20" fill="#8b949e">Visual UI Debug Agent</text>
-  <text x="120" y="350" font-family="SF Mono, Consolas, Liberation Mono, Menlo, monospace" font-size="14" fill="#58a6ff">Autonomous MCP Server for AI-Powered UI Testing</text>
+  <text x="120" y="350" font-family="SF Mono, Consolas, Liberation Mono, Menlo, monospace" font-size="14" fill="#58a6ff">MCP Server for AI-Powered UI Testing</text>
   
   <!-- Stats badges -->
   <g transform="translate(120, 370)">
     <rect x="0" y="0" width="80" height="22" rx="11" fill="#238636"/>
-    <text x="40" y="15" font-family="SF Mono, monospace" font-size="11" fill="white" text-anchor="middle">30 Tools</text>
+    <text x="40" y="15" font-family="SF Mono, monospace" font-size="11" fill="white" text-anchor="middle">29 Tools</text>
     
     <rect x="90" y="0" width="100" height="22" rx="11" fill="#1f6feb"/>
     <text x="140" y="15" font-family="SF Mono, monospace" font-size="11" fill="white" text-anchor="middle">Playwright</text>

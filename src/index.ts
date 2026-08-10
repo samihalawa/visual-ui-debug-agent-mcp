@@ -21,8 +21,11 @@ import { chromium, devices, request } from 'playwright';
 import { Jimp, JimpMime, diff, intToRGBA, loadFont } from 'jimp';
 import { SANS_16_WHITE } from 'jimp/fonts';
 
-let TEMP_DIR = path.join(os.tmpdir(), 'ai-vision-debug');
+let TEMP_DIR = path.join(os.tmpdir(), 'vuda');
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const packageVersion = JSON.parse(
+  fs.readFileSync(path.resolve(MODULE_DIR, '../package.json'), 'utf8')
+).version as string;
 
 // Configurable timeout settings for better flexibility
 const TIMEOUT_CONFIG = {
@@ -47,7 +50,7 @@ const TIMEOUT_CONFIG = {
 };
 
 // Set up logging to a file instead of console
-const logDir = path.join(os.tmpdir(), 'ai-vision-debug-logs');
+const logDir = path.join(os.tmpdir(), 'vuda-logs');
 try {
   if (!fs.existsSync(logDir)) {
     fs.mkdirSync(logDir, { recursive: true });
@@ -58,7 +61,7 @@ try {
 } catch (error) {
   console.error(`Failed to create directory: ${error instanceof Error ? error.message : 'Unknown error'}`);
   // Use fallback temporary directory
-  const fallbackDir = path.join(os.tmpdir(), 'fallback-debug');
+  const fallbackDir = path.join(os.tmpdir(), 'vuda-fallback');
   try {
     fs.mkdirSync(fallbackDir, { recursive: true });
     TEMP_DIR = fallbackDir;
@@ -67,7 +70,7 @@ try {
   }
 }
 
-const logFile = path.join(logDir, 'ai-vision-debug.log');
+const logFile = path.join(logDir, 'vuda.log');
 
 function logToFile(message: string): void {
   try {
@@ -287,8 +290,8 @@ class AIVisionDebugServer {
   constructor() {
     this.server = new Server(
       {
-        name: 'ai-vision-debug',
-        version: '1.0.2',
+        name: 'vuda',
+        version: packageVersion,
       },
       {
         capabilities: {
