@@ -165,7 +165,7 @@ npm pack --dry-run
 ## Architecture
 
 <p align="center">
-  <img src="publicresources/architecture.svg" alt="VUDA architecture" width="90%">
+  <img src="publicresources/vuda-architecture.svg" alt="VUDA architecture" width="90%">
 </p>
 
 VUDA keeps one interactive Playwright page for direct controls, creates isolated contexts for page-level analyses, returns screenshots as MCP image content, and exposes generated screenshots and debugging prompts as MCP resources.
