@@ -3,7 +3,8 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -11,6 +12,18 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { chromium } from 'playwright';
 
 const profileDirectory = mkdtempSync(join(tmpdir(), 'vuda-cdp-profile-'));
+
+async function removeProfileDirectory() {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    try {
+      await rm(profileDirectory, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+      return;
+    } catch (error) {
+      if (error?.code !== 'ENOTEMPTY' || attempt === 9) return;
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+  }
+}
 const chromeCandidates = [
   chromium.executablePath(),
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -90,5 +103,5 @@ try {
       new Promise(resolve => setTimeout(resolve, 3000)),
     ]);
   }
-  rmSync(profileDirectory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  await removeProfileDirectory();
 }
