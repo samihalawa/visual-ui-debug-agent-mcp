@@ -72,7 +72,12 @@ const transport = new StdioClientTransport({
     ...process.env,
     VUDA_STABILITY_WAIT: '50',
     VUDA_DEFAULT_TIMEOUT: '5000',
-    VUDA_NAVIGATION_TIMEOUT: '5000'
+    VUDA_NAVIGATION_TIMEOUT: '5000',
+    VUDA_COOKIES_JSON: JSON.stringify([{
+      name: 'vuda_session',
+      value: 'injected',
+      url: fixtureA.url,
+    }]),
   },
   stderr: 'pipe'
 });
@@ -95,6 +100,11 @@ try {
   assert.deepEqual(actualTools, expectedTools);
 
   const { resources } = await client.listResources();
+  assert.ok(resources.some(resource => resource.uri === 'browser://status'), 'browser status resource must be listed');
+  const browserStatus = await client.readResource({ uri: 'browser://status' });
+  const browserStatusJson = JSON.parse(browserStatus.contents[0]?.text ?? '{}');
+  assert.equal(browserStatusJson.provider, process.env.EXPECTED_BROWSER_PROVIDER ?? 'local');
+  assert.equal(browserStatusJson.connected, false);
   const promptUris = [
     'prompt://visual-debugging',
     'prompt://ui-debug',
@@ -128,6 +138,16 @@ try {
     assert.match(responseText, new RegExp(`"server": "${fixture === fixtureA ? 'A' : 'B'}"`));
   }
 
+  await client.callTool({
+    name: 'playwright_navigate',
+    arguments: { url: fixtureA.url, waitUntil: 'domcontentloaded' }
+  });
+  const injectedCookie = await client.callTool({
+    name: 'playwright_evaluate',
+    arguments: { script: 'document.cookie' }
+  });
+  assert.match(injectedCookie.content[0]?.text ?? '', /vuda_session=injected/);
+
   const screenshot = await client.callTool({
     name: 'screenshot_url',
     arguments: {
@@ -155,6 +175,13 @@ try {
     'page analyzer must return image evidence'
   );
 
+  const sitemap = await client.callTool({
+    name: 'sitemap_crawler',
+    arguments: { url: fixtureA.url, maxDepth: 0 }
+  });
+  assert.equal(sitemap.isError, undefined);
+  assert.match(sitemap.content[0]?.text ?? '', /Total Pages[^\n]*1/);
+
   const comparison = await client.callTool({
     name: 'visual_comparison',
     arguments: {
@@ -173,9 +200,11 @@ try {
   console.log(`PASS resource reads: ${promptUris.length} prompts`);
   console.log('PASS tool call: debug_memory save/retrieve');
   console.log('PASS API calls: independent base URLs');
+  console.log('PASS browser account state: configured cookie reached the page');
   console.log('PASS browser call: screenshot_url returned PNG');
   console.log('PASS analyzer call: interactive-element annotation');
   console.log('PASS comparison call: visual diff image');
+  console.log('PASS crawler call: initializes its own browser page');
 } catch (error) {
   if (stderr.trim()) {
     console.error(stderr.trim());

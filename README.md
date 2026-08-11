@@ -12,13 +12,13 @@
 </p>
 
 <p align="center">
-  <strong>Give an MCP-compatible AI client a browser, screenshots, DOM inspection, workflow validation, console capture, API checks, and visual comparison.</strong><br>
-  <sub>29 MCP tools · Node.js 20+ · TypeScript · Playwright</sub>
+  <strong>Give an MCP-compatible AI client a real browser, screenshots, DOM inspection, workflow validation, console capture, API checks, and visual comparison.</strong><br>
+  <sub>29 MCP tools · Local, Browserbase, Anchor, or any CDP browser · Node.js 20+</sub>
 </p>
 
 ## What VUDA does
 
-VUDA (Visual UI Debug Agent) is a local [Model Context Protocol](https://modelcontextprotocol.io/) server for inspecting and testing web interfaces with Playwright. It runs over standard input/output, so it works with MCP clients that can launch local commands.
+VUDA (Visual UI Debug Agent) is a [Model Context Protocol](https://modelcontextprotocol.io/) server for inspecting and testing web interfaces with Playwright. The MCP server runs locally over standard input/output; its browser can run locally, on Browserbase, on Anchor Browser, or at an existing CDP endpoint. Every tool uses the same selected browser runtime.
 
 - Capture full-page, viewport, element, local-file, and batch screenshots.
 - Map interactive elements and inspect rendered DOM and computed styles.
@@ -40,7 +40,7 @@ VUDA (Visual UI Debug Agent) is a local [Model Context Protocol](https://modelco
 npx -y visual-ui-debug-agent-mcp
 ```
 
-Playwright needs a Chromium-compatible browser. If one is not already available, install the matching browser once:
+The default `local` mode needs a Chromium-compatible browser. If one is not already available, install the matching browser once:
 
 ```bash
 npx playwright install chromium
@@ -61,6 +61,8 @@ npx playwright install chromium
 
 Restart the client after changing its MCP configuration. The server writes protocol messages to stdout and diagnostics to its temporary log file.
 
+No provider account is required for local mode.
+
 Docker users can use the same stdio transport:
 
 ```json
@@ -73,6 +75,8 @@ Docker users can use the same stdio transport:
   }
 }
 ```
+
+To use provider credentials from a file with Docker, add `"--env-file", "/absolute/path/to/.env"` immediately after `"run"` in the `args` array.
 
 ### 3. Try it
 
@@ -115,7 +119,55 @@ interactive elements, and report console errors and obvious layout issues.
 
 ## Configuration
 
-All settings are optional environment variables:
+VUDA reads environment variables normally and automatically loads `.env` from its working directory. Copy [`.env.example`](.env.example) when running from a source checkout. For an `npx` installation, either put `.env` in the MCP process working directory, pass variables in the client configuration, or set `DOTENV_CONFIG_PATH` to an absolute `.env` path.
+
+### Choose the browser
+
+| Mode | Required configuration | Account state |
+| --- | --- | --- |
+| Local (default) | `VUDA_BROWSER_PROVIDER=local` | `VUDA_STORAGE_STATE_PATH`, cookie JSON, or a cookie file |
+| Browserbase | `VUDA_BROWSER_PROVIDER=browserbase`, `BROWSERBASE_API_KEY` | Reuse `BROWSERBASE_CONTEXT_ID` or inject cookies |
+| Anchor Browser | `VUDA_BROWSER_PROVIDER=anchor`, `ANCHOR_API_KEY` | Use an Anchor profile in `VUDA_ANCHOR_SESSION_JSON` or inject cookies |
+| Existing browser | `VUDA_BROWSER_PROVIDER=cdp`, `VUDA_CDP_URL` | Uses that browser context; cookie injection is optional |
+
+Browserbase example:
+
+```env
+VUDA_BROWSER_PROVIDER=browserbase
+BROWSERBASE_API_KEY=your_api_key
+BROWSERBASE_PROJECT_ID=your_project_id
+BROWSERBASE_CONTEXT_ID=your_saved_context_id
+```
+
+Anchor Browser example with a persistent authenticated profile:
+
+```env
+VUDA_BROWSER_PROVIDER=anchor
+ANCHOR_API_KEY=your_api_key
+VUDA_ANCHOR_SESSION_JSON={"browser":{"profile":{"name":"vuda","persist":true}}}
+```
+
+All 29 tools keep their existing names and inputs in every mode. Read the MCP resource `browser://status` to confirm the selected provider, current connection state, session ID, and whether a live view is available. CDP and live-view URLs are never returned.
+
+### Import cookies or local state
+
+Cookie injection works with every provider. Supply a Playwright cookie array inline or by file:
+
+```env
+VUDA_COOKIES_FILE=/absolute/path/to/cookies.json
+# VUDA_COOKIES_JSON=[{"name":"session","value":"...","domain":"example.com","path":"/"}]
+```
+
+For local mode, `VUDA_STORAGE_STATE_PATH` loads a Playwright storage-state file. Set `VUDA_PERSIST_STORAGE_STATE=true` to write the updated state back when VUDA exits cleanly. Browserbase Contexts and Anchor profiles are the provider-native choices for state that must survive multiple cloud sessions.
+
+Provider-specific session options remain available without another wrapper or SDK:
+
+- `VUDA_BROWSERBASE_SESSION_JSON` is merged into Browserbase's create-session request.
+- `VUDA_ANCHOR_SESSION_JSON` is sent as Anchor's create-session request.
+
+### Timeouts
+
+All timeout settings are optional:
 
 | Variable | Default | Purpose |
 | --- | ---: | --- |
@@ -155,6 +207,8 @@ npm test
 
 `npm test` builds the TypeScript server, starts it through the MCP stdio transport, verifies the exact 29-tool inventory, reads a bundled resource, exercises a stateful tool call, and captures a real browser screenshot.
 
+It also validates Browserbase and Anchor session request/cleanup shapes, CDP selection, cookie loading, and the crawler's browser initialization. Provider calls use deterministic mocks in CI; use your own `.env` for a live cloud session.
+
 Before opening a pull request, also run:
 
 ```bash
@@ -168,7 +222,7 @@ npm pack --dry-run
   <img src="publicresources/vuda-architecture.svg" alt="VUDA architecture" width="90%">
 </p>
 
-VUDA keeps one interactive Playwright page for direct controls, creates isolated contexts for page-level analyses, returns screenshots as MCP image content, and exposes generated screenshots and debugging prompts as MCP resources.
+VUDA keeps one Playwright control plane across all providers. Local mode creates isolated contexts for page-level analyses; remote modes reuse the provider context so authenticated state survives across tools. VUDA returns screenshots as MCP image content and exposes generated screenshots, browser status, and debugging prompts as MCP resources.
 
 ## Contributing
 

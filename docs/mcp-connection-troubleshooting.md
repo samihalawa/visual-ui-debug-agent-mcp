@@ -8,5 +8,8 @@ VUDA is a stdio MCP server. It does not listen on an HTTP port.
 4. Restart the MCP client after editing its configuration.
 5. If browser tools fail, run `npx playwright install chromium` once.
 6. Check the VUDA diagnostic log under the operating system's temporary directory in `vuda-logs/vuda.log`.
+7. Read `browser://status` in the MCP client to confirm which provider was selected and whether it connected.
+
+For Browserbase, confirm `BROWSERBASE_API_KEY`; the project ID is optional when the key maps to one project. For Anchor Browser, confirm `ANCHOR_API_KEY`. For a direct endpoint, confirm `VUDA_CDP_URL` is a Chromium CDP WebSocket URL. VUDA reports provider API and CDP connection errors through the MCP tool call and writes the same failure to its diagnostic log.
 
 For a source checkout, `npm test` verifies the stdio handshake, complete tool inventory, resource reads, stateful tool calls, and a browser screenshot.

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import 'dotenv/config';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -20,6 +21,14 @@ import { z } from 'zod';
 import { chromium, devices, request } from 'playwright';
 import { Jimp, JimpMime, diff, intToRGBA, loadFont } from 'jimp';
 import { SANS_16_WHITE } from 'jimp/fonts';
+import {
+  applyConfiguredCookies,
+  browserProviderStatus,
+  createRemoteSession,
+  loadBrowserProviderConfig,
+  releaseRemoteSession,
+  type RemoteSession,
+} from './browser-provider.js';
 
 let TEMP_DIR = path.join(os.tmpdir(), 'vuda');
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -80,6 +89,11 @@ function logToFile(message: string): void {
   }
 }
 
+function safeBrowserError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.replace(/wss?:\/\/\S+/gi, '[redacted CDP endpoint]');
+}
+
 // Session state to track current debugging session
 interface DebugSession {
   currentUrl: string | null;
@@ -100,6 +114,8 @@ let browserContext: import('playwright').BrowserContext | null = null;
 let activePage: import('playwright').Page | null = null;
 let apiContext: import('playwright').APIRequestContext | null = null;
 let apiContextBaseUrl: string | undefined;
+const browserProviderConfig = loadBrowserProviderConfig();
+let remoteSession: RemoteSession | null = null;
 
 // Store console logs and screenshots for resource access
 const consoleLogs: string[] = [];
@@ -314,6 +330,13 @@ class AIVisionDebugServer {
 
   private async cleanup() {
     try {
+      if (browserContext && browserProviderConfig.persistStorageState && browserProviderConfig.storageStatePath) {
+        await fsPromises.mkdir(path.dirname(browserProviderConfig.storageStatePath), { recursive: true });
+        await browserContext.storageState({ path: browserProviderConfig.storageStatePath }).catch(error => {
+          logToFile(`Failed to persist browser storage state: ${error}`);
+        });
+      }
+
       if (activePage) {
         await activePage.close().catch(() => {});
         activePage = null;
@@ -328,6 +351,11 @@ class AIVisionDebugServer {
         await browserInstance.close().catch(() => {});
         browserInstance = null;
       }
+
+      await releaseRemoteSession(browserProviderConfig, remoteSession).catch(error => {
+        logToFile(`Failed to release remote browser session: ${error}`);
+      });
+      remoteSession = null;
       
       if (apiContext) {
         await apiContext.dispose().catch(() => {});
@@ -346,19 +374,29 @@ class AIVisionDebugServer {
    */
   private async ensureBrowser(viewportWidth = 1280, viewportHeight = 800, deviceName?: string) {
     try {
-      if (!browserInstance) {
-        logToFile('Initializing browser...');
-        try {
-          browserInstance = await chromium.launch({ headless: true });
-        } catch (error) {
-          logToFile(`Bundled Chromium unavailable, trying installed Chrome: ${error}`);
-          browserInstance = await chromium.launch({ headless: true, channel: 'chrome' });
+      if (!browserInstance || !browserInstance.isConnected()) {
+        if (remoteSession) {
+          await releaseRemoteSession(browserProviderConfig, remoteSession).catch(error => {
+            logToFile(`Failed to release disconnected remote session: ${safeBrowserError(error)}`);
+          });
+          remoteSession = null;
         }
-      }
-      
-      // Always create a new context with the specified settings
-      if (browserContext) {
-        await browserContext.close().catch(() => {});
+        browserInstance = null;
+        browserContext = null;
+        activePage = null;
+        logToFile(`Initializing ${browserProviderConfig.provider} browser...`);
+        if (browserProviderConfig.provider === 'local') {
+          try {
+            browserInstance = await chromium.launch({ headless: true });
+          } catch (error) {
+            logToFile(`Bundled Chromium unavailable, trying installed Chrome: ${error}`);
+            browserInstance = await chromium.launch({ headless: true, channel: 'chrome' });
+          }
+        } else {
+          remoteSession = await createRemoteSession(browserProviderConfig);
+          browserInstance = await chromium.connectOverCDP(remoteSession.cdpUrl);
+          logToFile(`Connected to ${browserProviderConfig.provider} browser session ${remoteSession.sessionId ?? 'external'}`);
+        }
       }
       
       const contextOptions: any = {};
@@ -374,7 +412,18 @@ class AIVisionDebugServer {
         contextOptions.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36';
       }
       
-      browserContext = await browserInstance.newContext(contextOptions);
+      if (browserProviderConfig.provider === 'local') {
+        if (browserContext) await browserContext.close().catch(() => {});
+        if (browserProviderConfig.storageStatePath && fs.existsSync(browserProviderConfig.storageStatePath)) {
+          contextOptions.storageState = browserProviderConfig.storageStatePath;
+        }
+        browserContext = await browserInstance.newContext(contextOptions);
+      } else {
+        browserContext = browserInstance.contexts()[0] ?? await browserInstance.newContext();
+      }
+
+      const cookieCount = await applyConfiguredCookies(browserContext, browserProviderConfig);
+      if (cookieCount) logToFile(`Applied ${cookieCount} configured browser cookies`);
       
       // Create a new page
       if (activePage) {
@@ -382,6 +431,9 @@ class AIVisionDebugServer {
       }
       
       activePage = await browserContext.newPage();
+      if (browserProviderConfig.provider !== 'local') {
+        await activePage.setViewportSize({ width: viewportWidth, height: viewportHeight });
+      }
       
       // Set default timeout using configurable values for better flexibility
       activePage.setDefaultTimeout(TIMEOUT_CONFIG.DEFAULT_TIMEOUT);
@@ -395,9 +447,18 @@ class AIVisionDebugServer {
       
       return activePage;
     } catch (error) {
-      logToFile(`Error ensuring browser: ${error}`);
-      throw error;
+      const safeMessage = safeBrowserError(error);
+      logToFile(`Error ensuring ${browserProviderConfig.provider} browser: ${safeMessage}`);
+      throw new Error(safeMessage);
     }
+  }
+
+  private async createBrowserPage(): Promise<import('playwright').Page> {
+    if (!browserContext) await this.ensureBrowser();
+    const page = await browserContext!.newPage();
+    page.setDefaultTimeout(TIMEOUT_CONFIG.DEFAULT_TIMEOUT);
+    page.setDefaultNavigationTimeout(TIMEOUT_CONFIG.NAVIGATION_TIMEOUT);
+    return page;
   }
 
   /**
@@ -1340,7 +1401,7 @@ class AIVisionDebugServer {
         try {
           // Create a simple grid layout using HTML and then screenshot it
           const gridHtml = this.createGridHtml(successfulScreenshots, gridSize);
-          const gridPage = await browserInstance!.newPage();
+          const gridPage = await this.createBrowserPage();
           
           try {
             await gridPage.setContent(gridHtml);
@@ -1726,7 +1787,7 @@ class AIVisionDebugServer {
         logToFile(`Running performance iteration ${i + 1}/${iterations}`);
         
         // Start with a fresh browser instance for each iteration
-        if (browserContext) {
+        if (browserContext && browserProviderConfig.provider === 'local') {
           await browserContext.close().catch(() => {});
           browserContext = null;
         }
@@ -2082,6 +2143,12 @@ class AIVisionDebugServer {
           name: "Browser console logs",
         },
         {
+          uri: "browser://status",
+          mimeType: "application/json",
+          name: "Browser provider status",
+          description: "Selected browser provider and connection state without exposing credentials"
+        },
+        {
           uri: "prompt://visual-debugging",
           mimeType: "text/markdown",
           name: "Visual Debugging Protocol Guide",
@@ -2117,6 +2184,20 @@ class AIVisionDebugServer {
             uri,
             mimeType: "text/plain",
             text: consoleLogs.join("\n"),
+          }],
+        };
+      }
+
+      if (uri === "browser://status") {
+        return {
+          contents: [{
+            uri,
+            mimeType: "application/json",
+            text: JSON.stringify(
+              browserProviderStatus(browserProviderConfig, remoteSession, Boolean(browserInstance?.isConnected())),
+              null,
+              2
+            ),
           }],
         };
       }
@@ -4982,6 +5063,8 @@ lt --port ${localPort}
             // Parse base URL for domain checking
             const baseUrl = new URL(url);
             const baseDomain = baseUrl.hostname;
+            await this.ensureBrowser();
+            const createCrawlPage = () => this.createBrowserPage();
             
             // Recursive crawl function
             async function crawlUrl(pageUrl: string, depth: number): Promise<void> {
@@ -4993,7 +5076,7 @@ lt --port ${localPort}
               
               try {
                 // Create new page for each crawl to avoid conflicts
-                const crawlPage = await browserInstance!.newPage();
+                const crawlPage = await createCrawlPage();
                 
                 try {
                   // Navigate with configurable timeout

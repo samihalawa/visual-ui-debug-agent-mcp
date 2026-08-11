@@ -51,24 +51,27 @@
   
   <!-- Arrow 2 -->
   <line x1="490" y1="130" x2="560" y2="130" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrowhead)"/>
-  <text x="525" y="120" font-family="monospace" font-size="10" fill="#58a6ff" text-anchor="middle">CDP</text>
+  <text x="525" y="120" font-family="monospace" font-size="10" fill="#58a6ff" text-anchor="middle">ONE API</text>
   
   <!-- Playwright box -->
   <g transform="translate(570, 80)">
     <rect width="140" height="100" rx="8" fill="#21262d" stroke="#3fb950" stroke-width="2"/>
     <text x="70" y="40" font-family="system-ui" font-size="14" fill="#3fb950" text-anchor="middle" font-weight="600">Playwright</text>
-    <text x="70" y="60" font-family="system-ui" font-size="10" fill="#8b949e" text-anchor="middle">Browser Automation</text>
-    <text x="70" y="75" font-family="system-ui" font-size="10" fill="#8b949e" text-anchor="middle">Screenshots</text>
+    <text x="70" y="60" font-family="system-ui" font-size="10" fill="#8b949e" text-anchor="middle">Shared Context</text>
+    <text x="70" y="75" font-family="system-ui" font-size="10" fill="#8b949e" text-anchor="middle">Cookies + State</text>
   </g>
   
   <!-- Arrow 3 -->
-  <line x1="710" y1="130" x2="780" y2="130" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="710" y1="130" x2="738" y2="130" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrowhead)"/>
   
   <!-- Browser box -->
-  <g transform="translate(790, 80)">
-    <rect width="80" height="100" rx="8" fill="#21262d" stroke="#f0883e" stroke-width="2"/>
-    <text x="40" y="45" font-family="system-ui" font-size="12" fill="#f0883e" text-anchor="middle" font-weight="600">Browser</text>
-    <rect x="15" y="55" width="50" height="30" rx="3" fill="#161b22"/>
+  <g transform="translate(748, 70)">
+    <rect width="122" height="120" rx="8" fill="#21262d" stroke="#f0883e" stroke-width="2"/>
+    <text x="61" y="25" font-family="system-ui" font-size="12" fill="#f0883e" text-anchor="middle" font-weight="600">Browser</text>
+    <text x="61" y="47" font-family="system-ui" font-size="10" fill="#c9d1d9" text-anchor="middle">Local Chromium</text>
+    <text x="61" y="65" font-family="system-ui" font-size="10" fill="#c9d1d9" text-anchor="middle">Browserbase</text>
+    <text x="61" y="83" font-family="system-ui" font-size="10" fill="#c9d1d9" text-anchor="middle">Anchor Browser</text>
+    <text x="61" y="101" font-family="system-ui" font-size="10" fill="#c9d1d9" text-anchor="middle">Any CDP endpoint</text>
   </g>
   
   <!-- Tools section -->
